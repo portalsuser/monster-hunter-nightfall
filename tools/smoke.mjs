@@ -860,6 +860,94 @@ console.log('▶ phase 11 — levels, boss clears and the sweep');
   }
 }
 
+// --- Phase 12: Vigor, the hound, and the horde mix ----------------------------
+console.log('▶ phase 12 — Vigor, the Spirit Hound, and the horde mix');
+{
+  // Vigor's card says it restores you to full, so it has to restore you to
+  // full. It used to top you up only by the maximum it had just added, which on
+  // a wounded hunter reads as the pick doing nothing.
+  game.restart();
+  game.state = 'playing';
+  const P = game.player, W = game.weapons;
+  P.stats.hp = 5;
+  const maxBefore = P.stats.maxHp;
+  W.addOrLevel('vigor');
+  if (P.stats.maxHp <= maxBefore) fail('Vigor did not raise maximum health');
+  if (P.stats.hp !== P.stats.maxHp) {
+    fail(`Vigor left the hunter on ${Math.round(P.stats.hp)}/${Math.round(P.stats.maxHp)} — the card promises full`);
+  }
+  // ...at every rank, not just the first.
+  P.stats.hp = 1;
+  W.addOrLevel('vigor');
+  if (P.stats.hp !== P.stats.maxHp) fail('a second rank of Vigor did not heal to full');
+  console.log(`   Vigor heals to full: ${Math.round(P.stats.maxHp)}/${Math.round(P.stats.maxHp)} at rank 2`);
+
+  // Other passives must NOT heal — Vigor is the one that says it does.
+  game.restart();
+  game.state = 'playing';
+  P.stats.hp = 20;
+  W.addOrLevel('might');
+  if (P.stats.hp !== 20) fail('Hunter\'s Might healed, which it does not claim to do');
+
+  // The Spirit Hound must actually travel, and must not stall on the leash
+  // boundary. Both failures looked identical in play: a hound stuck in place.
+  game.restart();
+  game.state = 'playing';
+  W.owned.clear();
+  for (let i = 0; i < 5; i++) W.addOrLevel('hound');
+  // A monster parked just outside the acquire radius but inside the leash is
+  // exactly the case that used to make the hound ping-pong.
+  const hb = WEAPONS.hound.base;
+  game.enemies.spawnOne('goblin', P.pos.x + hb.range * 0.9, P.pos.z, game.elapsed);
+  for (let i = 0; i < 30; i++) frame();
+
+  const trail = [];
+  for (let i = 0; i < 240; i++) {
+    frame();
+    const h = W.hounds[0];
+    trail.push({ x: h.x, z: h.z });
+  }
+  let travelled = 0;
+  for (let i = 1; i < trail.length; i++) {
+    travelled += Math.hypot(trail[i].x - trail[i - 1].x, trail[i].z - trail[i - 1].z);
+  }
+  // Jitter: how often it reverses direction frame to frame. An overshooting
+  // hound flips almost every frame; a settled one barely does.
+  let flips = 0;
+  for (let i = 2; i < trail.length; i++) {
+    const ax = trail[i - 1].x - trail[i - 2].x, az = trail[i - 1].z - trail[i - 2].z;
+    const bx = trail[i].x - trail[i - 1].x, bz = trail[i].z - trail[i - 1].z;
+    if (ax * bx + az * bz < 0) flips++;
+  }
+  const flipRate = flips / (trail.length - 2);
+  if (travelled < 2) fail(`the hound covered only ${travelled.toFixed(2)} units in 4s — it is stuck`);
+  if (flipRate > 0.35) {
+    fail(`the hound reversed direction on ${(flipRate * 100).toFixed(0)}% of frames — it is oscillating, not hunting`);
+  }
+  for (const h of W.hounds) {
+    if (!Number.isFinite(h.x) || !Number.isFinite(h.z)) fail('hound position went NaN');
+  }
+  const scale = W.hounds[0].group.scale.x;
+  if (scale <= 1) fail(`the hound is still at scale ${scale}`);
+  console.log(`   hound at ${scale}x covered ${travelled.toFixed(1)}u in 4s, `
+    + `reversing on ${(flipRate * 100).toFixed(0)}% of frames`);
+
+  // Horde mix: fewer, tougher, worth proportionately more.
+  game.restart();
+  game.state = 'playing';
+  game.enemies.spawnOne('goblin', 5, 0, 0);
+  const g0 = game.enemies.enemies[game.enemies.enemies.length - 1];
+  const def = (await import('../src/enemies.js')).ENEMY_TYPES.goblin;
+  const wantHp = def.hp * CFG.ENEMY.hpMul;
+  if (Math.abs(g0.maxHp - wantHp) > 0.01) {
+    fail(`a fresh Grotling has ${g0.maxHp} HP, expected ${wantHp} (${CFG.ENEMY.hpMul}x)`);
+  }
+  const wantXp = Math.round(def.xp * CFG.ENEMY.partsMul);
+  if (g0.xp !== wantXp) fail(`a fresh Grotling drops ${g0.xp} parts, expected ${wantXp}`);
+  console.log(`   Grotling: ${g0.maxHp} HP (${CFG.ENEMY.hpMul}x), ${g0.xp} parts (${CFG.ENEMY.partsMul.toFixed(2)}x)`);
+  game.restart();
+}
+
 // --- Report ------------------------------------------------------------------
 console.log(`\nframes simulated: ${steps}  renders: ${game.renderer.renders}  level-ups taken: ${picks}`);
 if (warnings.length) {
