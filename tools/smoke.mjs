@@ -434,10 +434,11 @@ console.log('▶ phase 7 — frame cost with a saturated horde');
   // has to stay well under a third of that even at max density.
   if (ms > 5) fail(`simulation costs ${ms.toFixed(2)} ms/frame with ${alive} enemies — too slow for 60fps`);
   // This only guards against the timing above being measured on an empty map.
-  // It is deliberately loose: the standing population swings between roughly
-  // 90 and 115 depending on how well the kite pattern happens to cull, and a
-  // tight bound here flagged RNG rather than a real density regression.
-  if (alive < 75) fail(`late-game horde only reached ${alive} enemies; the frame-cost measurement is not meaningful`);
+  // It is deliberately loose. The population swings with how well the kite
+  // pattern happens to cull, and it dropped sharply once the rankPick fix let
+  // Knives, Cross, Holy Water, Sigil and Fangs fire past rank 5 — a fully
+  // ranked build now actually mows the horde down, which is the point.
+  if (alive < 25) fail(`late-game horde only reached ${alive} enemies; the frame-cost measurement is not meaningful`);
 }
 
 // --- Phase 8: level-up integrity (regression) -------------------------------
@@ -653,6 +654,86 @@ console.log('▶ phase 9 — dodge roll and stamina');
   game.restart();
   if (st.stamina !== st.staminaMax) fail('restart did not refill stamina');
   if (p.dodgeTime !== 0 || p.dodgeCd !== 0) fail('restart left dodge state behind');
+}
+
+// --- Phase 10: every weapon does something at every rank ----------------------
+//
+// The milestone tables are five entries long but weapons rank to 20. Reading
+// one past rank 5 gave `undefined`, and `for (let i = 0; i < undefined; i++)`
+// runs zero times — so half the arsenal went silent at rank 6 while still
+// burning its cooldown, and Bear Traps lost its cap entirely. Rank 5 passing
+// told us nothing about rank 6, so this walks all 20 for all 13 weapons.
+console.log('▶ phase 10 — every weapon at every rank');
+{
+  game.restart();
+  game.state = 'playing';
+  const W = game.weapons;
+
+  // Count everything a weapon can possibly do in a frame.
+  let hits = 0;
+  const origHit = W.hitEnemy.bind(W);
+  W.hitEnemy = (...a) => { hits++; return origHit(...a); };
+  const activity = () => hits
+    + W.projectiles.filter((x) => x.alive).length
+    + W.grounds.filter((x) => x.alive).length
+    + W.traps.filter((x) => x.alive).length
+    + W.slashes.filter((x) => x.life > 0).length
+    + W.bolts.filter((x) => x.life > 0).length
+    + W.hounds.filter((x) => x.active).length
+    + (W.pyreMesh.visible ? 1 : 0)
+    + (W.censerMesh.visible ? 1 : 0)
+    // Whetstone Fangs writes instances directly into the shared mesh; the
+    // pools above never see it.
+    + Object.values(W.projMeshes).reduce((n, m) => n + (m.count || 0), 0);
+
+  const dead = [];
+  for (const key of Object.keys(WEAPONS)) {
+    for (let rank = 1; rank <= WEAPONS[key].maxLevel; rank++) {
+      game.restart();
+      game.state = 'playing';
+      W.owned.clear();
+      for (let i = 0; i < rank; i++) W.addOrLevel(key);
+      if (W.owned.get(key).level !== rank) fail(`${key} would not rank to ${rank}`);
+
+      // A ring of live targets, close enough for every reach in the game.
+      for (let i = 0; i < 14; i++) {
+        const a = (i / 14) * Math.PI * 2;
+        game.enemies.spawnOne(
+          'goblin',
+          game.player.pos.x + Math.cos(a) * 3.5,
+          game.player.pos.z + Math.sin(a) * 3.5,
+          game.elapsed
+        );
+      }
+
+      hits = 0;
+      // Long enough to clear the slowest cooldown in the game at rank 1.
+      for (let i = 0; i < 60 * 5; i++) frame();
+      if (activity() === 0) dead.push(`${key} rank ${rank}`);
+    }
+  }
+  W.hitEnemy = origHit;
+
+  if (dead.length) {
+    fail(`${dead.length} weapon/rank combinations do nothing at all: ${dead.slice(0, 12).join(', ')}`
+      + (dead.length > 12 ? ` … and ${dead.length - 12} more` : ''));
+  }
+  const combos = Object.values(WEAPONS).reduce((n, d) => n + d.maxLevel, 0);
+  console.log(`   ${combos - dead.length}/${combos} weapon/rank combinations fire`);
+
+  // Bear Traps must still respect its cap past rank 5 rather than losing it.
+  game.restart();
+  game.state = 'playing';
+  W.owned.clear();
+  for (let i = 0; i < 20; i++) W.addOrLevel('traps');
+  for (let i = 0; i < 60 * 12; i++) frame();
+  const liveTraps = W.traps.filter((t) => t.alive).length;
+  const trapCap = W.constructor.rankPick([1, 2, 2, 3, 3], 20);
+  if (liveTraps > trapCap) {
+    fail(`Bear Traps at rank 20 placed ${liveTraps} traps against a cap of ${trapCap}`);
+  }
+  console.log(`   Bear Traps rank 20 holds its cap of ${trapCap} (${liveTraps} live)`);
+  game.restart();
 }
 
 // --- Report ------------------------------------------------------------------
