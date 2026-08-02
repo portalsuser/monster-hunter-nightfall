@@ -398,7 +398,10 @@ export class WeaponSystem {
     const MAX = 18;
     this.slashes = [];
     for (let i = 0; i < MAX; i++) {
-      const geo = new THREE.RingGeometry(0.55, 1.0, 56, 2, 0, 2.0);
+      // A narrow band, not a filled wedge — at peak opacity the old 0.55..1.0
+      // ring covered a big slab of screen and read as a white blob rather than
+      // a strike.
+      const geo = new THREE.RingGeometry(0.76, 1.0, 56, 2, 0, 2.0);
       geo.rotateX(-Math.PI / 2);
       const mat = new THREE.MeshBasicMaterial({
         color: 0xe8eef7, transparent: true, opacity: 0, depthWrite: false,
@@ -1361,7 +1364,7 @@ export class WeaponSystem {
       if (s.life <= 0) { s.mesh.visible = false; continue; }
       const t = s.life / s.maxLife;
       // Snap out fast, then linger — reads as a strike rather than a fade.
-      s.mesh.material.opacity = Math.min(1, t * 1.9) * 0.95;
+      s.mesh.material.opacity = Math.min(1, t * 1.9) * 0.72;
       s.mesh.scale.multiplyScalar(1 + dt * 2.6);
     }
   }
