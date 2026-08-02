@@ -80,9 +80,24 @@ turns up on roughly 5% of early screens instead of every other one.
 
 ## Monsters
 
-Eight trash types unlock over time — Grotlings, Gloomwolves, Nightwings,
-Widows (which spawn in clusters), Bonegnashers, Corpse Lights (ranged),
-Revenants, and Shriekers (which detonate on death).
+Each level has its **own roster of four**, and no monster appears on two
+levels. Every roster unlocks on the same schedule — one type at the start,
+then 0:36, 1:24 and 2:12 — so a level's variety builds the way level 1's
+always did.
+
+| Level | Roster |
+| --- | --- |
+| 1 — the forest floor | Grotlings, Gloomwolves, Nightwings, Widows (cluster) |
+| 2 — the mire | Mirelings, Thornbacks, Carrion Moths, Bog Fiends (cluster) |
+| 3 — the barrow | Revenants, Bonegnashers, Corpse Lights (ranged), Shriekers (detonate) |
+
+Past level 3 the rosters cycle, with each level's tier making them tougher.
+
+Difficulty runs off **time into the current level**, not the run clock, so
+every level opens calm and builds across its three minutes. What makes level 2
+harder than level 1 is the tier its monsters are drawn from — more health,
+more damage, more parts — not more of them: the count curve is identical on
+every level.
 
 Four bosses cycle with escalating stats: **Elder Treant** (ground slam),
 **Blight Wyrm** (charge), **Wraith Lord** (projectile volley + summons), and
