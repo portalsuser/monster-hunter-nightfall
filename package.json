@@ -9,6 +9,7 @@
     "dev": "npx --yes serve . -l 5173",
     "vendor": "bash tools/vendor-three.sh",
     "test": "node tools/smoke.mjs",
+    "tris": "node tools/tribudget.mjs",
     "bundle": "bash tools/bundle.sh"
   },
   "keywords": ["threejs", "webgl", "game", "survivors", "portals"],

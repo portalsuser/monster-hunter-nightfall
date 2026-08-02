@@ -20,8 +20,11 @@ M                              mute
   monster, so you can keep running while you fight.
 - **Monster parts are XP.** Everything you kill drops them. Collect enough and
   you level up.
-- **20 enhancements, hard cap.** Every level up offers three cards. Weapons cap
-  at level 5; you can carry 6 weapons and 6 passives at once.
+- **Everything ranks to 20.** Every level up offers three cards. Each weapon
+  and each passive levels independently up to rank 20; you can carry 6 weapons
+  and 6 passives at once, so a run tops out at 240 enhancements. Ranks 1-5 are
+  hand-written milestones; past that a weapon keeps gaining damage and shedding
+  cooldown.
 - **A boss every 3 minutes.** It drops a large hoard of parts, a fistful of
   health, and a guaranteed **bonus enhancement**.
 - **Chests** appear as you run. Break them by walking into them or hitting them.
@@ -54,7 +57,7 @@ Sweep, Keen Edge, Bloodhound, Slow Mending, and Second Wind (a revive).
 
 ## Monsters
 
-Eight trash types unlock over time — Rotfeeders, Gloomwolves, Nightwings,
+Eight trash types unlock over time — Grotlings, Gloomwolves, Nightwings,
 Widows (which spawn in clusters), Bonegnashers, Corpse Lights (ranged),
 Revenants, and Shriekers (which detonate on death).
 
@@ -163,6 +166,8 @@ src/
 tools/
   smoke.mjs         headless test
   mock-three.mjs    three.js stand-in for the test
+  tribudget.mjs     analytic triangle budget
+  count-three.mjs   three.js stand-in that reports real triangle counts
   vendor-three.sh   fetch three.js into vendor/
   bundle.sh         build the Portals zip
 push.sh             push this repo to GitHub
@@ -176,8 +181,16 @@ around the player with a seeded PRNG. Every projectile, particle, drop and
 ground effect is pooled. Target lookups go through a spatial hash rather than
 scanning the enemy list.
 
-Measured by the smoke test at late-game density: **~0.6 ms/frame** of simulation
-with 217 live monsters and every weapon firing.
+Measured by the smoke test at late-game density: **~0.5 ms/frame** of simulation
+with 99 live monsters and every weapon firing.
+
+GPU cost is budgeted analytically instead, because the headless test cannot
+rasterise anything. `npm run tris` walks the real geometry constructors through
+a counting stand-in and reports per-monster and whole-frame totals:
+
+```
+npm run tris   # currently ~1.46M triangles/frame incl. the shadow pass, 73% of budget
+```
 
 ## License
 
