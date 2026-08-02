@@ -32,7 +32,7 @@ export const CFG = {
   WORLD: {
     tileSize: 40,             // ground tiles recycled around the player
     tileGrid: 5,              // 5x5 tiles follow the player -> 200u of ground
-    treesPerTile: 34,
+    treesPerTile: 24,
     rocksPerTile: 10,
     fernsPerTile: 30,
     fogColor: 0x05070c,

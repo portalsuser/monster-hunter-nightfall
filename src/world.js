@@ -175,8 +175,8 @@ export class World {
     lowGeo.translate(0, 1.7, 0);
     const topGeo = new THREE.ConeGeometry(1.05, 3.0, 16, 3);
     topGeo.translate(0, 1.5, 0);
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f6038, roughness: 0.9, flatShading: false });
-    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x3c7546, roughness: 0.9, flatShading: false });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2c5734, roughness: 0.9, flatShading: false });
+    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x36663e, roughness: 0.9, flatShading: false });
 
     this.foliageLow = new THREE.InstancedMesh(lowGeo, leafMat, total);
     this.foliageTop = new THREE.InstancedMesh(topGeo, leafMat2, total);
@@ -207,7 +207,7 @@ export class World {
     const fernGeo = new THREE.ConeGeometry(0.34, 0.85, 6, 2, true);
     fernGeo.translate(0, 0.42, 0);
     const fernMat = new THREE.MeshStandardMaterial({
-      color: 0x376b3c, roughness: 0.85, side: THREE.DoubleSide,
+      color: 0x33623a, roughness: 0.85, side: THREE.DoubleSide,
     });
     this.ferns = new THREE.InstancedMesh(fernGeo, fernMat, fernTotal);
     this.ferns.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -279,7 +279,7 @@ export class World {
     for (let i = 0; i < this.perTile; i++) {
       const x = ox + (rng() - 0.5) * size;
       const z = oz + (rng() - 0.5) * size;
-      const scale = 0.75 + rng() * 1.35;
+      const scale = 0.7 + rng() * 0.95;
       const rot = rng() * TAU;
       const lean = (rng() - 0.5) * 0.13;
 
