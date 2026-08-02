@@ -40,6 +40,35 @@ function mergeGeos(geos) {
   return out;
 }
 
+
+/** Four jointed legs for one side of the Widow, merged into one geometry. */
+function spiderLegs(side) {
+  const parts = [];
+  for (let i = 0; i < 4; i++) {
+    const spread = -0.34 + i * 0.24;
+    const upper = new THREE.CylinderGeometry(0.028, 0.024, 0.32, 8);
+    upper.rotateZ(side * -0.95);
+    upper.translate(side * 0.19, 0.13, spread);
+    const lower = new THREE.CylinderGeometry(0.024, 0.014, 0.34, 8);
+    lower.rotateZ(side * 0.75);
+    lower.translate(side * 0.36, -0.06, spread);
+    // A knuckle at the joint so the leg reads as jointed rather than kinked.
+    const joint = new THREE.SphereGeometry(0.032, 8, 6);
+    joint.translate(side * 0.29, 0.03, spread);
+    parts.push(upper, lower, joint);
+  }
+  return mergeGeos(parts);
+}
+
+/** Bonegnasher arm: upper limb plus a heavy knuckled fist. */
+function bruteArm() {
+  const limb = new THREE.CapsuleGeometry(0.16, 0.66, 6, 12);
+  limb.translate(0, -0.36, 0);
+  const fist = new THREE.DodecahedronGeometry(0.24, 1);
+  fist.translate(0, -0.82, 0);
+  return mergeGeos([limb, fist]);
+}
+
 // ---------------------------------------------------------------------------
 // Trash mob type definitions
 // ---------------------------------------------------------------------------
@@ -62,7 +91,7 @@ function makeTypes() {
     minute: 0,
     parts: [
       { // hunched torso
-        geo: () => new THREE.CapsuleGeometry(0.26, 0.3, 5, 12),
+        geo: () => new THREE.CapsuleGeometry(0.26, 0.3, 8, 18),
         mat: () => stdMat(SKIN_D),
         place: (d, e, t) => {
           const bob = Math.sin(t * 9 + e.phase) * 0.05;
@@ -72,7 +101,7 @@ function makeTypes() {
         },
       },
       { // oversized head
-        geo: () => new THREE.SphereGeometry(0.27, 14, 11),
+        geo: () => new THREE.SphereGeometry(0.27, 20, 15),
         mat: () => stdMat(SKIN),
         place: (d, e, t) => {
           const bob = Math.sin(t * 9 + e.phase) * 0.05;
@@ -83,13 +112,20 @@ function makeTypes() {
       },
       { // pointed ears + hooked nose, merged into one mesh
         geo: () => {
-          const earL = new THREE.ConeGeometry(0.07, 0.34, 7);
+          const earL = new THREE.ConeGeometry(0.07, 0.34, 10);
           earL.rotateZ(1.15); earL.translate(-0.27, 0.06, -0.03);
-          const earR = new THREE.ConeGeometry(0.07, 0.34, 7);
+          const earR = new THREE.ConeGeometry(0.07, 0.34, 10);
           earR.rotateZ(-1.15); earR.translate(0.27, 0.06, -0.03);
-          const nose = new THREE.ConeGeometry(0.055, 0.2, 7);
+          const nose = new THREE.ConeGeometry(0.055, 0.2, 10);
           nose.rotateX(1.9); nose.translate(0, -0.03, 0.26);
-          return mergeGeos([earL, earR, nose]);
+          // Snaggle teeth in the lower jaw.
+          const tusks = [];
+          for (const x of [-0.09, 0.09]) {
+            const q = new THREE.ConeGeometry(0.02, 0.08, 6);
+            q.translate(x, -0.09, 0.2);
+            tusks.push(q);
+          }
+          return mergeGeos([earL, earR, nose, ...tusks]);
         },
         mat: () => stdMat(SKIN),
         place: (d, e, t) => {
@@ -101,8 +137,8 @@ function makeTypes() {
       },
       { // both eyes in one mesh
         geo: () => {
-          const a = new THREE.SphereGeometry(0.045, 9, 7); a.translate(-0.1, 0, 0.22);
-          const b = new THREE.SphereGeometry(0.045, 9, 7); b.translate(0.1, 0, 0.22);
+          const a = new THREE.SphereGeometry(0.045, 12, 9); a.translate(-0.1, 0, 0.22);
+          const b = new THREE.SphereGeometry(0.045, 12, 9); b.translate(0.1, 0, 0.22);
           return mergeGeos([a, b]);
         },
         mat: () => new THREE.MeshBasicMaterial({ color: 0xffe14a }),
@@ -114,7 +150,7 @@ function makeTypes() {
         },
       },
       { // ragged loincloth
-        geo: () => new THREE.BoxGeometry(0.4, 0.26, 0.34),
+        geo: () => new THREE.BoxGeometry(0.4, 0.26, 0.34, 3, 2, 3),
         mat: () => stdMat(0x6b4a2c),
         place: (d, e, t) => {
           const bob = Math.sin(t * 9 + e.phase) * 0.05;
@@ -124,7 +160,7 @@ function makeTypes() {
         },
       },
       { // left arm
-        geo: () => { const g = new THREE.CapsuleGeometry(0.065, 0.3, 4, 10); g.translate(0, -0.17, 0); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.065, 0.3, 6, 14); g.translate(0, -0.17, 0); return g; },
         mat: () => stdMat(SKIN),
         place: (d, e, t) => {
           const sw = Math.sin(t * 10 + e.phase) * 0.7;
@@ -135,7 +171,7 @@ function makeTypes() {
         },
       },
       { // right arm, raised to hold the club
-        geo: () => { const g = new THREE.CapsuleGeometry(0.065, 0.3, 4, 10); g.translate(0, -0.17, 0); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.065, 0.3, 6, 14); g.translate(0, -0.17, 0); return g; },
         mat: () => stdMat(SKIN),
         place: (d, e, t) => {
           const sw = -0.9 + Math.sin(t * 10 + e.phase) * 0.35;
@@ -147,9 +183,18 @@ function makeTypes() {
       },
       { // crude club, swung overhead
         geo: () => {
-          const shaft = new THREE.CylinderGeometry(0.035, 0.045, 0.42, 8);
-          const knot = new THREE.IcosahedronGeometry(0.1, 1); knot.translate(0, 0.24, 0);
-          return mergeGeos([shaft, knot]);
+          const shaft = new THREE.CylinderGeometry(0.035, 0.045, 0.42, 10);
+          const knot = new THREE.IcosahedronGeometry(0.1, 2); knot.translate(0, 0.24, 0);
+          // Iron nails hammered through the head.
+          const nails = [];
+          for (let i = 0; i < 3; i++) {
+            const a = (i / 3) * TAU;
+            const q = new THREE.ConeGeometry(0.014, 0.09, 5);
+            q.rotateZ(Math.PI / 2); q.rotateY(a);
+            q.translate(Math.sin(a) * 0.12, 0.24, Math.cos(a) * 0.12);
+            nails.push(q);
+          }
+          return mergeGeos([shaft, knot, ...nails]);
         },
         mat: () => stdMat(0x4a3520),
         place: (d, e, t) => {
@@ -163,7 +208,7 @@ function makeTypes() {
         },
       },
       { // left leg
-        geo: () => { const g = new THREE.CapsuleGeometry(0.075, 0.22, 4, 10); g.translate(0, -0.15, 0); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.075, 0.22, 6, 14); g.translate(0, -0.15, 0); return g; },
         mat: () => stdMat(SKIN_D),
         place: (d, e, t) => {
           const sw = Math.sin(t * 10 + e.phase) * 0.65;
@@ -174,7 +219,7 @@ function makeTypes() {
         },
       },
       { // right leg
-        geo: () => { const g = new THREE.CapsuleGeometry(0.075, 0.22, 4, 10); g.translate(0, -0.15, 0); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.075, 0.22, 6, 14); g.translate(0, -0.15, 0); return g; },
         mat: () => stdMat(SKIN_D),
         place: (d, e, t) => {
           const sw = -Math.sin(t * 10 + e.phase) * 0.65;
@@ -195,7 +240,7 @@ function makeTypes() {
     minute: 0.6,
     parts: [
       { // body
-        geo: () => { const g = new THREE.CapsuleGeometry(0.28, 0.62, 8, 16); g.rotateX(Math.PI / 2); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.28, 0.62, 10, 20); g.rotateX(Math.PI / 2); return g; },
         mat: () => stdMat(0x33333d),
         place: (d, e, t) => {
           d.position.set(e.x, (0.66 + Math.sin(t * 12 + e.phase) * 0.05) * e.scale, e.z);
@@ -204,7 +249,7 @@ function makeTypes() {
         },
       },
       { // shoulder ruff
-        geo: () => { const g = new THREE.TorusGeometry(0.3, 0.11, 8, 18); g.rotateY(Math.PI / 2); return g; },
+        geo: () => { const g = new THREE.TorusGeometry(0.3, 0.11, 12, 26); g.rotateY(Math.PI / 2); return g; },
         mat: () => stdMat(0x22222b),
         place: (d, e, t) => {
           d.position.set(e.x + Math.sin(e.yaw) * 0.28 * e.scale, (0.7 + Math.sin(t * 12 + e.phase) * 0.05) * e.scale, e.z + Math.cos(e.yaw) * 0.28 * e.scale);
@@ -213,7 +258,7 @@ function makeTypes() {
         },
       },
       { // head
-        geo: () => { const g = new THREE.ConeGeometry(0.24, 0.5, 14); g.rotateX(Math.PI / 2); return g; },
+        geo: () => { const g = new THREE.ConeGeometry(0.24, 0.5, 20, 2); g.rotateX(Math.PI / 2); return g; },
         mat: () => stdMat(0x2a2a33),
         place: (d, e, t) => {
           d.position.set(e.x + Math.sin(e.yaw) * 0.6 * e.scale, 0.72 * e.scale, e.z + Math.cos(e.yaw) * 0.6 * e.scale);
@@ -223,10 +268,18 @@ function makeTypes() {
       },
       { // snout + ears in one mesh
         geo: () => {
-          const snout = new THREE.ConeGeometry(0.11, 0.3, 9); snout.rotateX(Math.PI / 2); snout.translate(0, -0.05, 0.24);
-          const earL = new THREE.ConeGeometry(0.07, 0.22, 6); earL.translate(-0.13, 0.18, -0.1);
-          const earR = new THREE.ConeGeometry(0.07, 0.22, 6); earR.translate(0.13, 0.18, -0.1);
-          return mergeGeos([snout, earL, earR]);
+          const snout = new THREE.ConeGeometry(0.11, 0.3, 14); snout.rotateX(Math.PI / 2); snout.translate(0, -0.05, 0.24);
+          const earL = new THREE.ConeGeometry(0.07, 0.22, 9); earL.translate(-0.13, 0.18, -0.1);
+          const earR = new THREE.ConeGeometry(0.07, 0.22, 9); earR.translate(0.13, 0.18, -0.1);
+          // Bared teeth — the wolf is always mid-snarl.
+          const teeth = [];
+          for (let i = 0; i < 4; i++) {
+            const q = new THREE.ConeGeometry(0.016, 0.06, 5);
+            q.rotateX(Math.PI);
+            q.translate(-0.048 + i * 0.032, -0.09, 0.3);
+            teeth.push(q);
+          }
+          return mergeGeos([snout, earL, earR, ...teeth]);
         },
         mat: () => stdMat(0x25252d),
         place: (d, e, t) => {
@@ -249,7 +302,7 @@ function makeTypes() {
         },
       },
       { // front legs
-        geo: () => { const g = new THREE.CapsuleGeometry(0.055, 0.34, 4, 8); g.translate(0, -0.19, 0); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.055, 0.34, 6, 12); g.translate(0, -0.19, 0); return g; },
         mat: () => stdMat(0x24242c),
         place: (d, e, t) => {
           const sw = Math.sin(t * 16 + e.phase) * 0.75;
@@ -259,7 +312,7 @@ function makeTypes() {
         },
       },
       { // back legs
-        geo: () => { const g = new THREE.CapsuleGeometry(0.055, 0.34, 4, 8); g.translate(0, -0.19, 0); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.055, 0.34, 6, 12); g.translate(0, -0.19, 0); return g; },
         mat: () => stdMat(0x24242c),
         place: (d, e, t) => {
           const sw = -Math.sin(t * 16 + e.phase) * 0.75;
@@ -269,7 +322,7 @@ function makeTypes() {
         },
       },
       { // tail
-        geo: () => { const g = new THREE.ConeGeometry(0.09, 0.55, 8); g.rotateX(-Math.PI / 2); g.translate(0, 0, -0.26); return g; },
+        geo: () => { const g = new THREE.ConeGeometry(0.09, 0.55, 12, 3); g.rotateX(-Math.PI / 2); g.translate(0, 0, -0.26); return g; },
         mat: () => stdMat(0x2a2a33),
         place: (d, e, t) => {
           d.position.set(e.x - Math.sin(e.yaw) * 0.52 * e.scale, 0.74 * e.scale, e.z - Math.cos(e.yaw) * 0.52 * e.scale);
@@ -298,10 +351,12 @@ function makeTypes() {
       },
       { // tall ears + snout
         geo: () => {
-          const earL = new THREE.ConeGeometry(0.06, 0.28, 6); earL.rotateZ(0.3); earL.translate(-0.1, 0.2, -0.02);
-          const earR = new THREE.ConeGeometry(0.06, 0.28, 6); earR.rotateZ(-0.3); earR.translate(0.1, 0.2, -0.02);
-          const snout = new THREE.ConeGeometry(0.08, 0.16, 7); snout.rotateX(Math.PI / 2); snout.translate(0, -0.02, 0.2);
-          return mergeGeos([earL, earR, snout]);
+          const earL = new THREE.ConeGeometry(0.06, 0.28, 9); earL.rotateZ(0.3); earL.translate(-0.1, 0.2, -0.02);
+          const earR = new THREE.ConeGeometry(0.06, 0.28, 9); earR.rotateZ(-0.3); earR.translate(0.1, 0.2, -0.02);
+          const snout = new THREE.ConeGeometry(0.08, 0.16, 10); snout.rotateX(Math.PI / 2); snout.translate(0, -0.02, 0.2);
+          const fangL = new THREE.ConeGeometry(0.018, 0.07, 6); fangL.rotateX(Math.PI); fangL.translate(-0.035, -0.06, 0.2);
+          const fangR = new THREE.ConeGeometry(0.018, 0.07, 6); fangR.rotateX(Math.PI); fangR.translate(0.035, -0.06, 0.2);
+          return mergeGeos([earL, earR, snout, fangL, fangR]);
         },
         mat: () => stdMat(0x3a2d47),
         place: (d, e, t) => {
@@ -325,9 +380,9 @@ function makeTypes() {
       },
       { // membraned wing, right — ribs baked into the merge
         geo: () => {
-          const web = new THREE.PlaneGeometry(0.62, 0.34, 6, 4); web.translate(0.31, 0, 0);
-          const rib1 = new THREE.CylinderGeometry(0.012, 0.012, 0.6, 5); rib1.rotateZ(Math.PI / 2); rib1.translate(0.3, 0.1, 0);
-          const rib2 = new THREE.CylinderGeometry(0.012, 0.012, 0.5, 5); rib2.rotateZ(Math.PI / 2.3); rib2.translate(0.26, -0.06, 0);
+          const web = new THREE.PlaneGeometry(0.62, 0.34, 9, 6); web.translate(0.31, 0, 0);
+          const rib1 = new THREE.CylinderGeometry(0.012, 0.012, 0.6, 7); rib1.rotateZ(Math.PI / 2); rib1.translate(0.3, 0.1, 0);
+          const rib2 = new THREE.CylinderGeometry(0.012, 0.012, 0.5, 7); rib2.rotateZ(Math.PI / 2.3); rib2.translate(0.26, -0.06, 0);
           return mergeGeos([web, rib1, rib2]);
         },
         mat: () => stdMat(0x40304d, { side: THREE.DoubleSide }),
@@ -339,9 +394,9 @@ function makeTypes() {
       },
       { // membraned wing, left
         geo: () => {
-          const web = new THREE.PlaneGeometry(0.62, 0.34, 6, 4); web.translate(-0.31, 0, 0);
-          const rib1 = new THREE.CylinderGeometry(0.012, 0.012, 0.6, 5); rib1.rotateZ(Math.PI / 2); rib1.translate(-0.3, 0.1, 0);
-          const rib2 = new THREE.CylinderGeometry(0.012, 0.012, 0.5, 5); rib2.rotateZ(-Math.PI / 2.3); rib2.translate(-0.26, -0.06, 0);
+          const web = new THREE.PlaneGeometry(0.62, 0.34, 9, 6); web.translate(-0.31, 0, 0);
+          const rib1 = new THREE.CylinderGeometry(0.012, 0.012, 0.6, 7); rib1.rotateZ(Math.PI / 2); rib1.translate(-0.3, 0.1, 0);
+          const rib2 = new THREE.CylinderGeometry(0.012, 0.012, 0.5, 7); rib2.rotateZ(-Math.PI / 2.3); rib2.translate(-0.26, -0.06, 0);
           return mergeGeos([web, rib1, rib2]);
         },
         mat: () => stdMat(0x40304d, { side: THREE.DoubleSide }),
@@ -361,87 +416,189 @@ function makeTypes() {
     tint: 0x1f1a24, blood: 0x2f4a1f,
     minute: 2.2, cluster: [3, 6],
     parts: [
-      {
-        geo: () => new THREE.SphereGeometry(0.32, 16, 12),
+      { // abdomen
+        geo: () => new THREE.SphereGeometry(0.3, 22, 16),
         mat: () => stdMat(0x241d2b),
         place: (d, e, t) => {
-          d.position.set(e.x, (0.42 + Math.abs(Math.sin(t * 16 + e.phase)) * 0.07) * e.scale, e.z);
+          d.position.set(e.x - Math.sin(e.yaw) * 0.2 * e.scale,
+                         (0.44 + Math.abs(Math.sin(t * 16 + e.phase)) * 0.05) * e.scale,
+                         e.z - Math.cos(e.yaw) * 0.2 * e.scale);
           d.rotation.set(0, e.yaw, 0);
-          d.scale.set(e.scale, e.scale * 0.8, e.scale * 1.1);
+          d.scale.set(e.scale, e.scale * 0.85, e.scale * 1.15);
         },
       },
-      {
-        geo: () => { const g = new THREE.TorusGeometry(0.42, 0.05, 8, 20, Math.PI); g.rotateX(Math.PI / 2); return g; },
-        mat: () => stdMat(0x161119),
+      { // cephalothorax
+        geo: () => new THREE.SphereGeometry(0.19, 18, 14),
+        mat: () => stdMat(0x2f2637),
         place: (d, e, t) => {
-          d.position.set(e.x, 0.3 * e.scale, e.z);
-          d.rotation.set(0, e.yaw + Math.sin(t * 16 + e.phase) * 0.25, 0);
+          d.position.set(e.x + Math.sin(e.yaw) * 0.24 * e.scale,
+                         (0.42 + Math.abs(Math.sin(t * 16 + e.phase)) * 0.05) * e.scale,
+                         e.z + Math.cos(e.yaw) * 0.24 * e.scale);
+          d.rotation.set(0, e.yaw, 0);
           d.scale.setScalar(e.scale);
         },
       },
-      {
-        geo: () => { const g = new THREE.TorusGeometry(0.42, 0.05, 8, 20, Math.PI); g.rotateX(Math.PI / 2); return g; },
-        mat: () => stdMat(0x161119),
+      { // four left legs, merged and jointed
+        geo: () => spiderLegs(-1),
+        mat: () => stdMat(0x171119),
         place: (d, e, t) => {
-          d.position.set(e.x, 0.3 * e.scale, e.z);
-          d.rotation.set(0, e.yaw + Math.PI - Math.sin(t * 16 + e.phase) * 0.25, 0);
+          d.position.set(e.x, 0.4 * e.scale, e.z);
+          d.rotation.set(0, e.yaw, Math.sin(t * 17 + e.phase) * 0.14);
           d.scale.setScalar(e.scale);
         },
       },
-      {
-        geo: () => new THREE.SphereGeometry(0.05, 10, 8),
+      { // four right legs, opposite phase
+        geo: () => spiderLegs(1),
+        mat: () => stdMat(0x171119),
+        place: (d, e, t) => {
+          d.position.set(e.x, 0.4 * e.scale, e.z);
+          d.rotation.set(0, e.yaw, -Math.sin(t * 17 + e.phase) * 0.14);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // four eyes
+        geo: () => {
+          const g = [];
+          for (const [x, y, r] of [[-0.08, 0.05, 0.032], [0.08, 0.05, 0.032], [-0.04, -0.01, 0.022], [0.04, -0.01, 0.022]]) {
+            const q = new THREE.SphereGeometry(r, 10, 8); q.translate(x, y, 0.16); g.push(q);
+          }
+          return mergeGeos(g);
+        },
         mat: () => new THREE.MeshBasicMaterial({ color: 0xff2d5e }),
-        place: (d, e) => {
-          d.position.set(e.x + Math.sin(e.yaw) * 0.3 * e.scale, 0.5 * e.scale, e.z + Math.cos(e.yaw) * 0.3 * e.scale);
-          d.scale.setScalar(e.scale * 1.5);
-          d.rotation.set(0, 0, 0);
+        place: (d, e, t) => {
+          d.position.set(e.x + Math.sin(e.yaw) * 0.24 * e.scale,
+                         (0.44 + Math.abs(Math.sin(t * 16 + e.phase)) * 0.05) * e.scale,
+                         e.z + Math.cos(e.yaw) * 0.24 * e.scale);
+          d.rotation.set(0, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // fangs
+        geo: () => {
+          const a = new THREE.ConeGeometry(0.035, 0.16, 9); a.rotateX(2.6); a.translate(-0.06, -0.1, 0.15);
+          const b = new THREE.ConeGeometry(0.035, 0.16, 9); b.rotateX(2.6); b.translate(0.06, -0.1, 0.15);
+          return mergeGeos([a, b]);
+        },
+        mat: () => stdMat(0xd8cfc0),
+        place: (d, e, t) => {
+          d.position.set(e.x + Math.sin(e.yaw) * 0.26 * e.scale, 0.42 * e.scale, e.z + Math.cos(e.yaw) * 0.26 * e.scale);
+          d.rotation.set(0, e.yaw, 0);
+          d.scale.setScalar(e.scale);
         },
       },
     ],
   };
 
   // --- Bonegnasher: slow, tanky, hits hard ---------------------------------
+  const BONE = 0xbfb49a;
   types.brute = {
     name: 'Bonegnasher',
     hp: 70, speed: 2.4, dmg: 20, radius: 0.95, xp: 9, scale: 1.5,
     tint: 0x6b5a45, blood: 0x8a2b2b,
     minute: 3,
     parts: [
-      {
+      { // torso
         geo: () => new THREE.CapsuleGeometry(0.5, 0.7, 8, 18),
         mat: () => stdMat(0x5d4d3a),
         place: (d, e, t) => {
           d.position.set(e.x, 0.95 * e.scale, e.z);
+          d.rotation.set(0.08, e.yaw, Math.sin(t * 3.5 + e.phase) * 0.09);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // shoulder plates
+        geo: () => {
+          const a = new THREE.SphereGeometry(0.34, 12, 8, 0, TAU, 0, Math.PI * 0.55); a.translate(-0.5, 0, 0);
+          const b = new THREE.SphereGeometry(0.34, 12, 8, 0, TAU, 0, Math.PI * 0.55); b.translate(0.5, 0, 0);
+          return mergeGeos([a, b]);
+        },
+        mat: () => stdMat(0x7a6a52),
+        place: (d, e, t) => {
+          d.position.set(e.x, 1.42 * e.scale, e.z);
           d.rotation.set(0, e.yaw, Math.sin(t * 3.5 + e.phase) * 0.09);
           d.scale.setScalar(e.scale);
         },
       },
-      {
-        geo: () => new THREE.DodecahedronGeometry(0.36, 1),
-        mat: () => stdMat(0xa89275),
+      { // skull
+        geo: () => new THREE.SphereGeometry(0.3, 14, 11),
+        mat: () => stdMat(BONE),
         place: (d, e, t) => {
-          d.position.set(e.x, 1.72 * e.scale, e.z);
-          d.rotation.set(0.1, e.yaw + Math.sin(t * 3 + e.phase) * 0.15, 0);
+          d.position.set(e.x, 1.74 * e.scale, e.z);
+          d.rotation.set(0.1, e.yaw + Math.sin(t * 3 + e.phase) * 0.14, 0);
+          d.scale.set(e.scale, e.scale * 1.1, e.scale * 1.15);
+        },
+      },
+      { // jaw + tusks
+        geo: () => {
+          const jaw = new THREE.BoxGeometry(0.34, 0.14, 0.3); jaw.translate(0, -0.2, 0.1);
+          const tl = new THREE.ConeGeometry(0.05, 0.24, 6); tl.rotateX(-0.3); tl.translate(-0.13, -0.06, 0.2);
+          const tr = new THREE.ConeGeometry(0.05, 0.24, 6); tr.rotateX(-0.3); tr.translate(0.13, -0.06, 0.2);
+          return mergeGeos([jaw, tl, tr]);
+        },
+        mat: () => stdMat(0xd6cbb4),
+        place: (d, e, t) => {
+          const chew = Math.abs(Math.sin(t * 5 + e.phase)) * 0.08;
+          d.position.set(e.x, (1.74 - chew) * e.scale, e.z);
+          d.rotation.set(0.1, e.yaw + Math.sin(t * 3 + e.phase) * 0.14, 0);
           d.scale.setScalar(e.scale);
         },
       },
-      {
-        geo: () => { const g = new THREE.CapsuleGeometry(0.16, 0.72, 6, 14); g.translate(0, -0.4, 0); return g; },
+      { // horns
+        geo: () => {
+          const a = new THREE.ConeGeometry(0.07, 0.42, 8); a.rotateZ(0.9); a.translate(-0.26, 0.2, -0.04);
+          const b = new THREE.ConeGeometry(0.07, 0.42, 8); b.rotateZ(-0.9); b.translate(0.26, 0.2, -0.04);
+          return mergeGeos([a, b]);
+        },
+        mat: () => stdMat(0x8a7d63),
+        place: (d, e, t) => {
+          d.position.set(e.x, 1.74 * e.scale, e.z);
+          d.rotation.set(0.1, e.yaw + Math.sin(t * 3 + e.phase) * 0.14, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // eye sockets
+        geo: () => {
+          const a = new THREE.SphereGeometry(0.055, 9, 7); a.translate(-0.11, 0.02, 0.24);
+          const b = new THREE.SphereGeometry(0.055, 9, 7); b.translate(0.11, 0.02, 0.24);
+          return mergeGeos([a, b]);
+        },
+        mat: () => new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
+        place: (d, e, t) => {
+          d.position.set(e.x, 1.74 * e.scale, e.z);
+          d.rotation.set(0.1, e.yaw + Math.sin(t * 3 + e.phase) * 0.14, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // left arm with fist
+        geo: () => bruteArm(),
         mat: () => stdMat(0x4a3c2c),
         place: (d, e, t) => {
           const sw = Math.sin(t * 4 + e.phase) * 0.6;
-          d.position.set(e.x + Math.cos(e.yaw) * 0.62 * e.scale, 1.4 * e.scale, e.z - Math.sin(e.yaw) * 0.62 * e.scale);
-          d.rotation.set(sw, e.yaw, 0.3);
+          d.position.set(e.x + Math.cos(e.yaw) * 0.66 * e.scale, 1.4 * e.scale, e.z - Math.sin(e.yaw) * 0.66 * e.scale);
+          d.rotation.set(sw, e.yaw, 0.28);
           d.scale.setScalar(e.scale);
         },
       },
-      {
-        geo: () => { const g = new THREE.CapsuleGeometry(0.16, 0.72, 6, 14); g.translate(0, -0.4, 0); return g; },
+      { // right arm with fist
+        geo: () => bruteArm(),
         mat: () => stdMat(0x4a3c2c),
         place: (d, e, t) => {
           const sw = -Math.sin(t * 4 + e.phase) * 0.6;
-          d.position.set(e.x - Math.cos(e.yaw) * 0.62 * e.scale, 1.4 * e.scale, e.z + Math.sin(e.yaw) * 0.62 * e.scale);
-          d.rotation.set(sw, e.yaw, -0.3);
+          d.position.set(e.x - Math.cos(e.yaw) * 0.66 * e.scale, 1.4 * e.scale, e.z + Math.sin(e.yaw) * 0.66 * e.scale);
+          d.rotation.set(sw, e.yaw, -0.28);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // stubby legs
+        geo: () => {
+          const a = new THREE.CapsuleGeometry(0.17, 0.3, 5, 10); a.translate(-0.22, -0.2, 0);
+          const b = new THREE.CapsuleGeometry(0.17, 0.3, 5, 10); b.translate(0.22, -0.2, 0);
+          return mergeGeos([a, b]);
+        },
+        mat: () => stdMat(0x3f3426),
+        place: (d, e, t) => {
+          d.position.set(e.x, 0.52 * e.scale, e.z);
+          d.rotation.set(0, e.yaw, 0);
           d.scale.setScalar(e.scale);
         },
       },
@@ -455,22 +612,49 @@ function makeTypes() {
     tint: 0x5ad6ff, blood: 0x7fe8ff,
     minute: 4, flying: true, ranged: { range: 12, cooldown: 2.6, speed: 8.5, dmg: 9 },
     parts: [
-      {
-        geo: () => new THREE.IcosahedronGeometry(0.34, 2),
-        mat: () => new THREE.MeshBasicMaterial({ color: 0x63d9ff, transparent: true, opacity: 0.72 }),
+      { // core
+        geo: () => new THREE.IcosahedronGeometry(0.3, 2),
+        mat: () => new THREE.MeshBasicMaterial({ color: 0x9fe9ff }),
         place: (d, e, t) => {
           d.position.set(e.x, e.y, e.z);
           d.rotation.set(t * 0.9 + e.phase, t * 1.3, 0);
           d.scale.setScalar(e.scale * (0.9 + Math.sin(t * 4 + e.phase) * 0.12));
         },
       },
-      {
-        geo: () => new THREE.SphereGeometry(0.5, 14, 10),
-        mat: () => new THREE.MeshBasicMaterial({ color: 0x1d5f80, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false }),
+      { // halo
+        geo: () => new THREE.SphereGeometry(0.5, 20, 14),
+        mat: () => new THREE.MeshBasicMaterial({ color: 0x1d5f80, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }),
         place: (d, e, t) => {
           d.position.set(e.x, e.y, e.z);
           d.rotation.set(0, 0, 0);
           d.scale.setScalar(e.scale * (1.2 + Math.sin(t * 3 + e.phase) * 0.2));
+        },
+      },
+      { // orbiting motes
+        geo: () => {
+          const g = [];
+          for (let i = 0; i < 3; i++) {
+            const a = (i / 3) * TAU;
+            const q = new THREE.SphereGeometry(0.06, 12, 9);
+            q.translate(Math.cos(a) * 0.42, 0, Math.sin(a) * 0.42);
+            g.push(q);
+          }
+          return mergeGeos(g);
+        },
+        mat: () => new THREE.MeshBasicMaterial({ color: 0xd8f7ff }),
+        place: (d, e, t) => {
+          d.position.set(e.x, e.y, e.z);
+          d.rotation.set(0.4, t * 2.2 + e.phase, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // trailing shroud
+        geo: () => { const g = new THREE.ConeGeometry(0.26, 0.7, 18, 5, true); g.translate(0, -0.4, 0); return g; },
+        mat: () => new THREE.MeshBasicMaterial({ color: 0x2f7fa0, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }),
+        place: (d, e, t) => {
+          d.position.set(e.x, e.y, e.z);
+          d.rotation.set(Math.sin(t * 2 + e.phase) * 0.2, e.yaw, Math.cos(t * 2 + e.phase) * 0.2);
+          d.scale.setScalar(e.scale);
         },
       },
     ],
@@ -483,31 +667,86 @@ function makeTypes() {
     tint: 0x4a4f5e, blood: 0x3a2a4a,
     minute: 5,
     parts: [
-      {
-        geo: () => new THREE.ConeGeometry(0.42, 1.5, 16, 4, true),
-        mat: () => stdMat(0x3d4250, { side: THREE.DoubleSide, transparent: true, opacity: 0.92 }),
+      { // tattered robe
+        geo: () => new THREE.ConeGeometry(0.42, 1.5, 24, 7, true),
+        mat: () => stdMat(0x3d4250, { side: THREE.DoubleSide, transparent: true, opacity: 0.94 }),
         place: (d, e, t) => {
           d.position.set(e.x, 0.78 * e.scale, e.z);
           d.rotation.set(Math.sin(t * 5 + e.phase) * 0.07, e.yaw, Math.cos(t * 4 + e.phase) * 0.07);
           d.scale.setScalar(e.scale);
         },
       },
-      {
-        geo: () => new THREE.SphereGeometry(0.26, 16, 12),
+      { // hood
+        geo: () => new THREE.SphereGeometry(0.3, 20, 14, 0, TAU, 0, Math.PI * 0.62),
+        mat: () => stdMat(0x333846, { side: THREE.DoubleSide }),
+        place: (d, e, t) => {
+          d.position.set(e.x, (1.66 + Math.sin(t * 4 + e.phase) * 0.05) * e.scale, e.z);
+          d.rotation.set(0.1, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // skull + jaw
+        geo: () => {
+          const sk = new THREE.SphereGeometry(0.2, 20, 14);
+          const jaw = new THREE.BoxGeometry(0.2, 0.09, 0.18, 2, 1, 2); jaw.translate(0, -0.16, 0.05);
+          // Brow ridge and cheekbones — a bare sphere reads as a ball, not a skull.
+          const brow = new THREE.BoxGeometry(0.21, 0.05, 0.06, 3, 1, 1); brow.translate(0, 0.07, 0.16);
+          const cheekL = new THREE.SphereGeometry(0.055, 8, 6); cheekL.translate(-0.13, -0.04, 0.12);
+          const cheekR = new THREE.SphereGeometry(0.055, 8, 6); cheekR.translate(0.13, -0.04, 0.12);
+          return mergeGeos([sk, jaw, brow, cheekL, cheekR]);
+        },
         mat: () => stdMat(0xb9b2a0),
         place: (d, e, t) => {
-          d.position.set(e.x, (1.62 + Math.sin(t * 4 + e.phase) * 0.05) * e.scale, e.z);
+          d.position.set(e.x, (1.6 + Math.sin(t * 4 + e.phase) * 0.05) * e.scale, e.z);
           d.rotation.set(0, e.yaw, 0);
           d.scale.setScalar(e.scale);
         },
       },
-      {
-        geo: () => new THREE.SphereGeometry(0.055, 10, 8),
+      { // eyes
+        geo: () => {
+          const a = new THREE.SphereGeometry(0.045, 12, 9); a.translate(-0.075, 0.02, 0.16);
+          const b = new THREE.SphereGeometry(0.045, 12, 9); b.translate(0.075, 0.02, 0.16);
+          return mergeGeos([a, b]);
+        },
         mat: () => new THREE.MeshBasicMaterial({ color: 0x8affd8 }),
-        place: (d, e) => {
-          d.position.set(e.x + Math.sin(e.yaw) * 0.22 * e.scale, 1.66 * e.scale, e.z + Math.cos(e.yaw) * 0.22 * e.scale);
-          d.rotation.set(0, 0, 0);
-          d.scale.setScalar(e.scale * 1.6);
+        place: (d, e, t) => {
+          d.position.set(e.x, (1.6 + Math.sin(t * 4 + e.phase) * 0.05) * e.scale, e.z);
+          d.rotation.set(0, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // skeletal arms
+        geo: () => {
+          const a = new THREE.CapsuleGeometry(0.05, 0.44, 6, 12); a.rotateZ(0.4); a.translate(-0.32, -0.1, 0.06);
+          const b = new THREE.CapsuleGeometry(0.05, 0.44, 6, 12); b.rotateZ(-0.4); b.translate(0.32, -0.1, 0.06);
+          // Bony hands so the sleeves do not end in stumps.
+          const hL = new THREE.IcosahedronGeometry(0.07, 1); hL.translate(-0.44, -0.32, 0.06);
+          const hR = new THREE.IcosahedronGeometry(0.07, 1); hR.translate(0.44, -0.32, 0.06);
+          return mergeGeos([a, b, hL, hR]);
+        },
+        mat: () => stdMat(0xa9a290),
+        place: (d, e, t) => {
+          d.position.set(e.x, 1.24 * e.scale, e.z);
+          d.rotation.set(Math.sin(t * 5 + e.phase) * 0.24, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // rusted blade
+        geo: () => {
+          const blade = new THREE.BoxGeometry(0.07, 0.72, 0.02, 1, 6, 1); blade.translate(0, 0.3, 0);
+          const tip = new THREE.ConeGeometry(0.05, 0.16, 6); tip.translate(0, 0.72, 0);
+          const guard = new THREE.BoxGeometry(0.22, 0.05, 0.05, 3, 1, 1);
+          const grip = new THREE.CylinderGeometry(0.028, 0.032, 0.2, 8); grip.translate(0, -0.12, 0);
+          const pommel = new THREE.OctahedronGeometry(0.045, 1); pommel.translate(0, -0.23, 0);
+          return mergeGeos([blade, tip, guard, grip, pommel]);
+        },
+        mat: () => stdMat(0x6e5a48, { metalness: 0.5, roughness: 0.6 }),
+        place: (d, e, t) => {
+          const sw = Math.sin(t * 5 + e.phase) * 0.24;
+          const c = Math.cos(e.yaw), sn = Math.sin(e.yaw);
+          d.position.set(e.x - c * 0.36 * e.scale, 1.16 * e.scale, e.z + sn * 0.36 * e.scale);
+          d.rotation.set(sw - 0.5, e.yaw, -0.3);
+          d.scale.setScalar(e.scale);
         },
       },
     ],
@@ -520,23 +759,71 @@ function makeTypes() {
     tint: 0xa33f2a, blood: 0xff8a3c,
     minute: 6, explodes: { radius: 3.4, dmg: 26 },
     parts: [
-      {
-        geo: () => new THREE.SphereGeometry(0.48, 16, 12),
+      { // swollen body
+        geo: () => new THREE.SphereGeometry(0.44, 24, 18),
         mat: () => stdMat(0x8f3626, { emissive: 0x431208 }),
         place: (d, e, t) => {
-          const pulse = 1 + Math.sin(t * 8 + e.phase) * 0.11;
+          const pulse = 1 + Math.sin(t * 8 + e.phase) * 0.13;
           d.position.set(e.x, 0.55 * e.scale, e.z);
           d.rotation.set(0, e.yaw, 0);
           d.scale.setScalar(e.scale * pulse);
         },
       },
-      {
-        geo: () => new THREE.TorusGeometry(0.5, 0.07, 10, 24),
+      { // cracked shell plates
+        geo: () => {
+          const g = [];
+          for (let i = 0; i < 4; i++) {
+            const a = (i / 4) * TAU + 0.4;
+            const q = new THREE.SphereGeometry(0.2, 14, 10, 0, TAU, 0, Math.PI * 0.5);
+            q.rotateX(1.0); q.rotateY(a);
+            q.translate(Math.sin(a) * 0.34, 0.1, Math.cos(a) * 0.34);
+            g.push(q);
+          }
+          return mergeGeos(g);
+        },
+        mat: () => stdMat(0x5c2318),
+        place: (d, e, t) => {
+          const pulse = 1 + Math.sin(t * 8 + e.phase) * 0.09;
+          d.position.set(e.x, 0.55 * e.scale, e.z);
+          d.rotation.set(0, e.yaw + t * 0.3, 0);
+          d.scale.setScalar(e.scale * pulse);
+        },
+      },
+      { // glowing seams
+        geo: () => new THREE.TorusGeometry(0.46, 0.06, 12, 32),
         mat: () => new THREE.MeshBasicMaterial({ color: 0xff7b3c }),
         place: (d, e, t) => {
           d.position.set(e.x, 0.55 * e.scale, e.z);
           d.rotation.set(Math.PI / 2, 0, t * 2 + e.phase);
-          d.scale.setScalar(e.scale * (1 + Math.sin(t * 8 + e.phase) * 0.12));
+          d.scale.setScalar(e.scale * (1 + Math.sin(t * 8 + e.phase) * 0.13));
+        },
+      },
+      { // gaping maw
+        geo: () => { const g = new THREE.ConeGeometry(0.19, 0.3, 16, 2, true); g.rotateX(-Math.PI / 2); g.translate(0, 0, 0.36); return g; },
+        mat: () => new THREE.MeshBasicMaterial({ color: 0xffca6a, side: THREE.DoubleSide }),
+        place: (d, e, t) => {
+          d.position.set(e.x, 0.55 * e.scale, e.z);
+          d.rotation.set(0, e.yaw, 0);
+          d.scale.setScalar(e.scale * (1 + Math.sin(t * 11 + e.phase) * 0.18));
+        },
+      },
+      { // spines
+        geo: () => {
+          const g = [];
+          for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * TAU;
+            const q = new THREE.ConeGeometry(0.05, 0.28, 9);
+            q.rotateX(Math.PI / 2.4); q.rotateY(a);
+            q.translate(Math.sin(a) * 0.36, 0.28, Math.cos(a) * 0.36);
+            g.push(q);
+          }
+          return mergeGeos(g);
+        },
+        mat: () => stdMat(0xe8b06a),
+        place: (d, e, t) => {
+          d.position.set(e.x, 0.55 * e.scale, e.z);
+          d.rotation.set(0, e.yaw + t * 0.3, 0);
+          d.scale.setScalar(e.scale * (1 + Math.sin(t * 8 + e.phase) * 0.1));
         },
       },
     ],

@@ -241,10 +241,10 @@ export class Player {
     this.invuln = 0;
     this.hurtFlash = 0;
     this._walkPhase = 0;
-    this._punchT = 0;
     this._punchSide = 0;
     this._attackYaw = 0;
     this._attackHold = 0;
+    this._atk = null;     // active swing, see attack()
 
     // Stat block. Weapons read these every time they fire.
     this.stats = {
@@ -311,10 +311,40 @@ export class Player {
     return dealt;
   }
 
-  /** Triggers the fist swing animation used by the unarmed weapon. */
-  punch() {
-    this._punchT = 1;
+  /**
+   * Starts a swing. `kind` picks the choreography:
+   *   'punch' — a hook: coil away, drive through with the hips, follow across.
+   *   'slash' — a two-handed sweep with a deeper lunge.
+   *
+   * The old version just rotated one arm forward, which read as flapping.
+   * Real weight comes from the torso twisting first and the arm arriving late.
+   */
+  attack(kind = 'punch') {
+    this._atk = {
+      t: 0,
+      dur: kind === 'slash' ? 0.44 : 0.3,
+      kind,
+      side: this._punchSide === 0 ? -1 : 1,
+    };
     this._punchSide = this._punchSide === 0 ? 1 : 0;
+  }
+
+  /** Back-compat alias. */
+  punch() { this.attack('punch'); }
+
+  /**
+   * Swing curve, normalised to [-0.5 .. 1 .. 0]:
+   * wind back, snap through, ease home. Everything in the pose reads off this
+   * single value so the limbs, hips and lunge stay in sync.
+   */
+  static swingCurve(p) {
+    if (p < 0.3) return -0.5 * (p / 0.3);
+    if (p < 0.6) {
+      const k = (p - 0.3) / 0.3;
+      return -0.5 + 1.5 * (1 - Math.pow(1 - k, 3));   // fast out
+    }
+    const k = (p - 0.6) / 0.4;
+    return 1 - k * k;                                  // settle back
   }
 
   /**
@@ -369,26 +399,76 @@ export class Player {
     this.parts.legs[1].rotation.x = -swing;
 
     // Arms counter-swing, then the punch animation overrides one of them.
-    this.parts.arms[0].rotation.x = -swing * 0.7;
-    this.parts.arms[1].rotation.x = swing * 0.7;
-
-    if (this._punchT > 0) {
-      this._punchT = Math.max(0, this._punchT - dt * 6.5);
-      const p = 1 - this._punchT;
-      // Fast out, slow back.
-      const ext = p < 0.35 ? p / 0.35 : 1 - (p - 0.35) / 0.65;
-      const arm = this.parts.arms[this._punchSide];
-      arm.rotation.x = -1.55 * ext;
-      arm.position.z = ext * 0.22;
-      const other = this.parts.arms[1 - this._punchSide];
-      other.position.z = 0;
-    } else {
-      this.parts.arms[0].position.z = 0;
-      this.parts.arms[1].position.z = 0;
+    if (!this._atk) {
+      this.parts.arms[0].rotation.x = -swing * 0.7;
+      this.parts.arms[1].rotation.x = swing * 0.7;
     }
 
-    // Body bob + cloak drag.
-    this.parts.body.position.y = Math.abs(Math.sin(this._walkPhase)) * 0.045 * speedFrac;
+    // --- swing pose -------------------------------------------------------
+    let lungeF = 0;
+    if (this._atk) {
+      const a = this._atk;
+      a.t += dt;
+      const p = a.t / a.dur;
+      if (p >= 1) {
+        this._atk = null;
+      } else {
+        const sw = Player.swingCurve(p);
+        const s2 = a.side;
+        const two = a.kind === 'slash';
+
+        // Hips lead, shoulders follow — this is what sells the weight.
+        this.parts.body.rotation.y = s2 * sw * (two ? 0.95 : 0.6);
+        this.parts.body.rotation.x = sw * 0.14;
+        this.parts.body.rotation.z = s2 * sw * -0.1;
+        this.parts.body.position.y = -Math.abs(sw) * 0.07;
+
+        // Head lags the torso slightly, then snaps to the target.
+        this.parts.head.rotation.y = -s2 * sw * 0.3;
+
+        const lead = this.parts.arms[a.side > 0 ? 1 : 0];
+        const off = this.parts.arms[a.side > 0 ? 0 : 1];
+
+        // The striking arm travels on an arc, not a straight push.
+        lead.rotation.x = -0.35 - sw * 1.5;
+        lead.rotation.z = s2 * (0.2 - sw * 0.85);
+        lead.position.z = sw * 0.26;
+        lead.position.x = -s2 * sw * 0.12;
+
+        if (two) {
+          // Both hands on the haft.
+          off.rotation.x = -0.35 - sw * 1.35;
+          off.rotation.z = s2 * (0.1 - sw * 0.7);
+          off.position.z = sw * 0.2;
+        } else {
+          // Counter-rotation on the free arm keeps the pose from looking stiff.
+          off.rotation.x = 0.25 + sw * 0.55;
+          off.rotation.z = -s2 * sw * 0.2;
+          off.position.z = -sw * 0.1;
+        }
+
+        // A short lunge into the blow, applied to the mesh only so the
+        // hitbox and movement are untouched.
+        lungeF = Math.max(0, sw) * (two ? 0.42 : 0.26);
+      }
+    } else {
+      this.parts.body.rotation.set(0, 0, 0);
+      this.parts.head.rotation.y = 0;
+      this.parts.arms[0].position.set(-0.4, 1.4, 0);
+      this.parts.arms[1].position.set(0.4, 1.4, 0);
+      this.parts.arms[0].rotation.z = 0;
+      this.parts.arms[1].rotation.z = 0;
+    }
+
+    if (lungeF !== 0) {
+      this.mesh.position.x += Math.sin(this.facing) * lungeF;
+      this.mesh.position.z += Math.cos(this.facing) * lungeF;
+    }
+
+    // Body bob + coat drag (the swing pose owns the body while it is running).
+    if (!this._atk) {
+      this.parts.body.position.y = Math.abs(Math.sin(this._walkPhase)) * 0.045 * speedFrac;
+    }
     this.parts.cloak.rotation.x = -0.06 - speedFrac * 0.34 + Math.sin(this._walkPhase * 0.5) * 0.05 * speedFrac;
     this.parts.cloak.rotation.z = Math.sin(this._walkPhase * 0.7) * 0.07 * speedFrac;
 

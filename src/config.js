@@ -5,7 +5,10 @@
 
 export const CFG = {
   // ---- run structure -------------------------------------------------------
-  MAX_LEVEL_UPS: 20,          // hard cap requested in the design brief
+  // Each weapon and passive ranks to 20. With 6 weapon and 6 passive slots
+  // that is 240 picks to max a build out — aspirational, not expected.
+  MAX_RANK: 20,
+  MAX_LEVEL_UPS: 240,
   BOSS_INTERVAL: 180,         // seconds between boss spawns (3 minutes)
   FIRST_BOSS_AT: 180,
 
@@ -51,9 +54,11 @@ export const CFG = {
   // ---- progression ---------------------------------------------------------
   // Monster parts needed to go from level L to L+1. The opening deliberately
   // ramps fast: the first two picks should land inside the first minute so the
-  // player is never stuck with bare fists for long.
+  // player is never stuck with bare fists for long. The exponent is gentle
+  // because ranks now run to 20 per weapon rather than 20 in total — a steep
+  // curve would make anything past rank 5 unreachable.
   xpForLevel(level) {
-    return Math.round(4 + level * 3.4 + Math.pow(level, 1.82) * 1.25);
+    return Math.round(3 + level * 3 + Math.pow(level, 1.45) * 1.5);
   },
 
   // Global horde density. Spawn *rate* is what gets scaled (not the per-wave
@@ -99,7 +104,10 @@ export function difficulty(t) {
     hpMul: 1 + m * 0.34 + Math.pow(m, 1.7) * 0.035,
     dmgMul: 1 + m * 0.16,
     speedMul: 1 + Math.min(0.45, m * 0.035),
-    countMul: 1 + m * 0.34,
+    // Quadratic rather than linear: the 2-3 minute mark was chaotic on a
+    // straight ramp. This is markedly calmer through the early game and
+    // steeper than the old curve past ~15 minutes.
+    countMul: 1 + m * 0.17 + m * m * 0.013,
     xpMul: 1 + m * 0.1,
   };
 }

@@ -76,10 +76,10 @@ export class HUD {
     this.el.hpText.textContent = `${Math.ceil(p.hp)} / ${Math.round(p.maxHp)}`;
     this.el.lowhp.classList.toggle('active', hpFrac < 0.3 && p.alive);
 
-    const xpFrac = p.levelUps >= CFG.MAX_LEVEL_UPS ? 1 : Math.min(1, p.xp / p.xpNeeded);
+    const xpFrac = Math.min(1, p.xp / p.xpNeeded);
     this.el.xp.style.width = `${xpFrac * 100}%`;
     this.el.level.textContent = p.level;
-    this.el.picks.textContent = `${p.levelUps}/${CFG.MAX_LEVEL_UPS}`;
+    this.el.picks.textContent = `${p.levelUps}`;
 
     this.el.timer.textContent = formatTime(game.elapsed);
     this.el.kills.textContent = game.enemies.totalKills;
@@ -148,10 +148,14 @@ export class HUD {
       const btn = document.createElement('button');
       btn.className = 'card';
       btn.style.setProperty('--c', card.color);
-      const pips = card.maxLevel
-        ? `<div class="pips">${Array.from({ length: card.maxLevel }, (_, k) =>
-            `<i class="${k < card.level ? 'on' : ''}"></i>`).join('')}</div>`
-        : '';
+      // Twenty pips do not fit on a card; past a handful, show a rank bar.
+      const pips = !card.maxLevel
+        ? ''
+        : card.maxLevel <= 8
+          ? `<div class="pips">${Array.from({ length: card.maxLevel }, (_, k) =>
+              `<i class="${k < card.level ? 'on' : ''}"></i>`).join('')}</div>`
+          : `<div class="rankbar"><div class="rankbar-fill" style="width:${(card.level / card.maxLevel) * 100}%"></div>`
+            + `<span class="rankbar-txt">RANK ${card.level} / ${card.maxLevel}</span></div>`;
       btn.innerHTML = `
         <div class="card-top">
           <span class="card-icon">${card.icon}</span>
@@ -162,6 +166,11 @@ export class HUD {
         ${pips}
       `;
       btn.addEventListener('click', () => {
+        // Single-shot. hideLevelUp() only toggled a CSS class, so these buttons
+        // kept their listeners; a double-click (or a click plus a number key)
+        // fired the pick twice, and each fire spent one of the 20 enhancements.
+        if (!this._levelUpOpen) return;
+        this._levelUpOpen = false;
         SFX.select();
         onPick(card);
       });
@@ -172,17 +181,22 @@ export class HUD {
 
     this._levelUpCards = cards;
     this._levelUpPick = onPick;
+    this._levelUpOpen = true;
   }
 
   hideLevelUp() {
     this.el.levelup.classList.add('hidden');
     this._levelUpCards = null;
+    this._levelUpOpen = false;
+    // Drop the buttons entirely so no stale listener can fire later.
+    this.el.cards.innerHTML = '';
   }
 
   pickByIndex(i) {
-    if (!this._levelUpCards) return false;
+    if (!this._levelUpOpen || !this._levelUpCards) return false;
     const card = this._levelUpCards[i];
     if (!card) return false;
+    this._levelUpOpen = false;
     SFX.select();
     this._levelUpPick(card);
     return true;

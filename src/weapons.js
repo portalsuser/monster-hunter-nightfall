@@ -106,7 +106,7 @@ export const WEAPONS = {
     name: 'Warded Fists',
     icon: '✊',
     color: '#d8c9a8',
-    maxLevel: 5,
+    maxLevel: 20,
     starting: true,
     desc: 'Bare-knuckle strikes in a short arc. Everything a hunter starts with.',
     levels: [
@@ -123,7 +123,7 @@ export const WEAPONS = {
     name: 'Throwing Knives',
     icon: '🗡️',
     color: '#cfd6e0',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'Hurls knives in the direction you face. They pierce.',
     levels: [
       'Throw 1 knife.',
@@ -139,7 +139,7 @@ export const WEAPONS = {
     name: "Hunter's Blade",
     icon: '⚔️',
     color: '#e8eef7',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'A heavy sweeping slash that carves through a wide arc.',
     levels: [
       'Slash in a wide arc.',
@@ -155,7 +155,7 @@ export const WEAPONS = {
     name: 'Silver Cross',
     icon: '✝️',
     color: '#ffe9a8',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'A blessed cross that flies out, pierces everything, and returns.',
     levels: [
       'Throw 1 cross that returns.',
@@ -171,7 +171,7 @@ export const WEAPONS = {
     name: 'Holy Water',
     icon: '🧪',
     color: '#8fd8ff',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'Lobbed flasks shatter into consecrated pools that burn the unclean.',
     levels: [
       'Throw 1 flask.',
@@ -188,7 +188,7 @@ export const WEAPONS = {
     name: 'Ember Pyre',
     icon: '🔥',
     color: '#ff8a3c',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'A ring of fire wreathes you, setting anything that closes alight.',
     levels: [
       'Burning aura around you.',
@@ -205,7 +205,7 @@ export const WEAPONS = {
     name: 'Whetstone Fangs',
     icon: '🌀',
     color: '#e8d8b0',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'Daggers orbit you, shredding anything they touch.',
     levels: [
       '2 orbiting daggers.',
@@ -221,7 +221,7 @@ export const WEAPONS = {
     name: 'Storm Sigil',
     icon: '⚡',
     color: '#9fd0ff',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'Calls lightning down on enemies near you. Ignores everything in between.',
     levels: [
       '1 bolt every few seconds.',
@@ -237,7 +237,7 @@ export const WEAPONS = {
     name: 'Bear Traps',
     icon: '🪤',
     color: '#a8a8b0',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'Drops iron traps that clamp shut, rooting and mauling whatever steps in.',
     levels: [
       'Drop a trap behind you.',
@@ -254,7 +254,7 @@ export const WEAPONS = {
     name: 'Warding Censer',
     icon: '💨',
     color: '#c8b0ff',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'A swinging censer pulses out warding smoke, shoving monsters away.',
     levels: [
       'Pulses damage and knockback.',
@@ -270,7 +270,7 @@ export const WEAPONS = {
     name: 'Moon Glaive',
     icon: '🌙',
     color: '#dfe8ff',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'A great crescent blade that arcs out, hunts a target, and comes home.',
     levels: [
       'Throw 1 glaive.',
@@ -286,7 +286,7 @@ export const WEAPONS = {
     name: 'Frost Vial',
     icon: '❄️',
     color: '#a8e8ff',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'Shatters into a bloom of frost, freezing everything caught in it.',
     levels: [
       'Throw a freezing vial.',
@@ -303,7 +303,7 @@ export const WEAPONS = {
     name: 'Spirit Hound',
     icon: '🐺',
     color: '#8affd8',
-    maxLevel: 5,
+    maxLevel: 20,
     desc: 'A spectral wolf hunts alongside you and tears into whatever is closest.',
     levels: [
       'Summon 1 hound.',
@@ -317,17 +317,17 @@ export const WEAPONS = {
 };
 
 export const PASSIVES = {
-  might: { name: 'Hunter\'s Might', icon: '💪', color: '#ff8a6a', maxLevel: 5, desc: 'Increases all damage dealt.', step: '+15% damage' },
-  alacrity: { name: 'Alacrity', icon: '⏱️', color: '#9fd0ff', maxLevel: 5, desc: 'All weapons come off cooldown faster.', step: '-8% cooldown' },
-  swift: { name: 'Swiftshod', icon: '👢', color: '#a8ffb0', maxLevel: 5, desc: 'You move faster.', step: '+9% move speed' },
-  ironhide: { name: 'Ironhide', icon: '🛡️', color: '#c8c8d0', maxLevel: 5, desc: 'Reduces every hit you take.', step: '+2 armor' },
-  vigor: { name: 'Vigor', icon: '❤️', color: '#ff6a8a', maxLevel: 5, desc: 'Raises maximum health and heals you now.', step: '+22 max HP' },
-  lodestone: { name: 'Lodestone', icon: '🧲', color: '#ffd23c', maxLevel: 5, desc: 'Draws monster parts in from further away.', step: '+30% pickup range' },
-  sweep: { name: 'Wide Sweep', icon: '🌐', color: '#c8b0ff', maxLevel: 5, desc: 'Enlarges every area of effect.', step: '+12% area' },
-  keen: { name: 'Keen Edge', icon: '🎯', color: '#ffb03c', maxLevel: 5, desc: 'Chance to land devastating critical strikes.', step: '+6% crit' },
-  bloodhound: { name: 'Bloodhound', icon: '🩸', color: '#ff4a6a', maxLevel: 5, desc: 'Monster parts are worth more.', step: '+18% monster parts' },
-  mending: { name: 'Slow Mending', icon: '✚', color: '#8affb0', maxLevel: 5, desc: 'Regenerate health over time.', step: '+0.7 HP/sec' },
-  secondwind: { name: 'Second Wind', icon: '🕯️', color: '#ffe9a8', maxLevel: 2, desc: 'Survive a fatal blow once, restoring half your health.', step: '+1 revive' },
+  might: { name: 'Hunter\'s Might', icon: '💪', color: '#ff8a6a', maxLevel: 20, desc: 'Increases all damage dealt.', step: '+7% damage' },
+  alacrity: { name: 'Alacrity', icon: '⏱️', color: '#9fd0ff', maxLevel: 20, desc: 'All weapons come off cooldown faster.', step: '-3.5% cooldown' },
+  swift: { name: 'Swiftshod', icon: '👢', color: '#a8ffb0', maxLevel: 20, desc: 'You move faster.', step: '+3.5% move speed' },
+  ironhide: { name: 'Ironhide', icon: '🛡️', color: '#c8c8d0', maxLevel: 20, desc: 'Reduces every hit you take.', step: '+1.5 armor' },
+  vigor: { name: 'Vigor', icon: '❤️', color: '#ff6a8a', maxLevel: 20, desc: 'Raises maximum health and heals you now.', step: '+16 max HP' },
+  lodestone: { name: 'Lodestone', icon: '🧲', color: '#ffd23c', maxLevel: 20, desc: 'Draws monster parts in from further away.', step: '+12% pickup range' },
+  sweep: { name: 'Wide Sweep', icon: '🌐', color: '#c8b0ff', maxLevel: 20, desc: 'Enlarges every area of effect.', step: '+5% area' },
+  keen: { name: 'Keen Edge', icon: '🎯', color: '#ffb03c', maxLevel: 20, desc: 'Chance to land devastating critical strikes.', step: '+2.5% crit' },
+  bloodhound: { name: 'Bloodhound', icon: '🩸', color: '#ff4a6a', maxLevel: 20, desc: 'Monster parts are worth more.', step: '+7% monster parts' },
+  mending: { name: 'Slow Mending', icon: '✚', color: '#8affb0', maxLevel: 20, desc: 'Regenerate health over time.', step: '+0.35 HP/sec' },
+  secondwind: { name: 'Second Wind', icon: '🕯️', color: '#ffe9a8', maxLevel: 20, desc: 'Survive a fatal blow, restoring half your health.', step: '+1 revive every 4 ranks' },
 };
 
 // ---------------------------------------------------------------------------
@@ -539,26 +539,35 @@ export class WeaponSystem {
     const L = (k) => this.passives.get(k) || 0;
 
     const prevMax = s.maxHp;
-    s.might = 1 + L('might') * 0.15;
-    s.haste = Math.max(0.4, 1 - L('alacrity') * 0.08);
-    s.speed = CFG.PLAYER.speed * (1 + L('swift') * 0.09);
-    s.armor = L('ironhide') * 2;
-    s.maxHp = CFG.PLAYER.maxHp + L('vigor') * 22;
-    s.magnet = CFG.PLAYER.pickupRadius * (1 + L('lodestone') * 0.30);
-    s.area = 1 + L('sweep') * 0.12;
-    s.crit = 0.03 + L('keen') * 0.06;
-    s.greed = 1 + L('bloodhound') * 0.18;
-    s.regen = L('mending') * 0.7;
-    s.revives = L('secondwind');
+    s.might = 1 + L('might') * 0.07;
+    s.haste = Math.max(0.35, 1 - L('alacrity') * 0.035);
+    s.speed = CFG.PLAYER.speed * (1 + L('swift') * 0.035);
+    s.armor = L('ironhide') * 1.5;
+    s.maxHp = CFG.PLAYER.maxHp + L('vigor') * 16;
+    s.magnet = CFG.PLAYER.pickupRadius * (1 + L('lodestone') * 0.12);
+    s.area = 1 + L('sweep') * 0.05;
+    s.crit = 0.03 + L('keen') * 0.025;
+    s.greed = 1 + L('bloodhound') * 0.07;
+    s.regen = L('mending') * 0.35;
+    s.revives = Math.floor(L('secondwind') / 4);
 
     if (s.maxHp > prevMax) this.player.heal(s.maxHp - prevMax);
   }
 
   // ---- damage helpers ----------------------------------------------------
 
+  /**
+   * Ranks 1-5 are hand-authored milestones (extra projectiles, new behaviours).
+   * Ranks 6-20 are numeric: steady damage and recovery gains, so investing
+   * further in a weapon you like stays worthwhile without inventing fifteen
+   * more mechanics per weapon.
+   */
+  static rankDamage(level) { return 1 + Math.max(0, level - 5) * 0.11; }
+  static rankCooldown(level) { return Math.max(0.55, 1 - Math.max(0, level - 5) * 0.028); }
+
   _roll(base) {
     const s = this.player.stats;
-    let dmg = base * s.might;
+    let dmg = base * s.might * (this._rankMul || 1);
     const crit = chance(s.crit);
     if (crit) dmg *= s.critMul;
     return { dmg: Math.max(1, Math.round(dmg)), crit };
@@ -596,7 +605,7 @@ export class WeaponSystem {
       this.vfx.impact(e.x, hy, e.z, opts.silent
         ? { color: 0xff7a4a, n: 6, speed: 9, power: 1.1, size: 0.9 }
         : { color: 0xff7a4a, n: 16, speed: 12, ring: 2.6, power: 2.2, size: 1.1 });
-      if (!opts.silent) this.game.shake(0.22);
+      if (!opts.silent) { this.game.shake(0.22); this.game.hitstop(0.06); }
     } else if (!opts.silent) {
       this.vfx.impact(e.x, hy, e.z, {
         color: opts.hitColor || 0xffe9b0, n: 4, speed: 7, power: 0.55, size: 0.65,
@@ -721,16 +730,23 @@ export class WeaponSystem {
     return null;
   }
 
-  spawnSlash(x, z, angle, radius, arc, color) {
+  /**
+   * `sweep` rotates the wedge through the swing over its lifetime, so the arc
+   * reads as a blade travelling rather than a shape popping into existence.
+   * Purely visual — the damage arc is resolved separately and instantly.
+   */
+  spawnSlash(x, z, angle, radius, arc, color, sweep = 0) {
     for (const s of this.slashes) {
       if (s.life > 0) continue;
       s.life = s.maxLife;
+      s.sweep = sweep;
+      s.baseYaw = angle - Math.PI / 2 - 1.0 - sweep * 0.5;
       s.mesh.visible = true;
       s.mesh.position.set(x, 0.55, z);
       s.mesh.scale.setScalar(radius);
       // The ring geometry spans 2.0 rad starting at theta 0; a mesh yaw of `r`
       // shifts effective theta by +r, so centre the wedge on `angle`.
-      s.mesh.rotation.y = angle - Math.PI / 2 - 1.0;
+      s.mesh.rotation.y = s.baseYaw;
       s.mesh.material.color.set(color);
       return s;
     }
@@ -761,8 +777,10 @@ export class WeaponSystem {
       w.cd -= dt;
       if (w.cd <= 0) {
         const base = w.def.base;
+        this._rankMul = WeaponSystem.rankDamage(w.level);
         const cd = this._fire(w, dt, elapsed);
-        w.cd = (cd ?? base.cd) * p.stats.haste;
+        this._rankMul = 1;
+        w.cd = (cd ?? base.cd) * p.stats.haste * WeaponSystem.rankCooldown(w.level);
       }
     }
     // Continuous weapons that do not use the cooldown gate.
@@ -793,14 +811,24 @@ export class WeaponSystem {
         const range = b.range * s.area;
         const aim = this.aimAngle(range);
         p.faceAttack(aim);
-        p.punch();
+        p.attack('punch');
         SFX.punch();
         const fx = Math.sin(aim), fz = Math.cos(aim);
-        this.spawnSlash(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.95, arc, 0xffd9a0);
-        this.spawnSlash(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.62, arc, 0xfff4dc);
+        this.spawnSlash(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.95, arc, 0xffd9a0, arc * 0.8);
+        this.spawnSlash(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.62, arc, 0xfff4dc, arc * 0.8);
+        // Speed lines streaking along the arc.
+        for (let i = 0; i < 5; i++) {
+          const sa = aim + (i / 4 - 0.5) * arc;
+          this.vfx.spawnParticles(
+            p.pos.x + Math.sin(sa) * range * 0.75, 1.0, p.pos.z + Math.cos(sa) * range * 0.75,
+            1, { color: 0xfff0cf, speed: 2, life: 0.16, size: 0.6, up: 0.4, grav: -2 });
+        }
         this.vfx.flash(p.pos.x + fx * range * 0.6, 1.2, p.pos.z + fz * range * 0.6, 0xffc879, 0.7);
         const hits = this.arcHit(range, arc, dmg, { aim, knock: lvl >= 4 ? 5 : 1.5 });
-        if (hits > 0) this.game.shake(0.06 + Math.min(0.12, hits * 0.02));
+        if (hits > 0) {
+          this.game.shake(0.06 + Math.min(0.12, hits * 0.02));
+          this.game.hitstop(0.028);
+        }
 
         w.state.combo = (w.state.combo || 0) + 1;
         if (lvl >= 5 && w.state.combo % 4 === 0) {
@@ -815,7 +843,7 @@ export class WeaponSystem {
             if (!p.alive || this.game.state !== 'playing') return;
             const aim2 = this.aimAngle(range);
             p.faceAttack(aim2);
-            p.punch();
+            p.attack('punch');
             this.arcHit(range, arc, dmg * 0.7, { aim: aim2, knock: 1 });
           }, 140);
         }
@@ -854,14 +882,22 @@ export class WeaponSystem {
           const aim = this.aimAngle(range);
           const a = aim + (arc >= Math.PI * 2 ? 0 : side * 0.35);
           if (arc < Math.PI * 2) p.faceAttack(a);
-          this.spawnSlash(p.pos.x, p.pos.z, a, range * 1.05, arc, 0xbcd4ff);
-          this.spawnSlash(p.pos.x, p.pos.z, a, range * 0.7, arc, 0xffffff);
+          p.attack('slash');
+          this.spawnSlash(p.pos.x, p.pos.z, a, range * 1.05, arc, 0xbcd4ff, arc * 0.85);
+          this.spawnSlash(p.pos.x, p.pos.z, a, range * 0.7, arc, 0xffffff, arc * 0.85);
+          for (let i = 0; i < 8; i++) {
+            const sa = a + (i / 7 - 0.5) * arc;
+            this.vfx.spawnParticles(
+              p.pos.x + Math.sin(sa) * range * 0.8, 1.05, p.pos.z + Math.cos(sa) * range * 0.8,
+              1, { color: 0xdfe8ff, speed: 2.5, life: 0.2, size: 0.75, up: 0.5, grav: -2 });
+          }
           this.vfx.ring(p.pos.x, p.pos.z, range * 0.5, range * 1.25, 0xdfe8ff, 0.3, 0.3);
           const hits = this.arcHit(range, arc, dmg, { aim: a, knock: 3, hitColor: 0xdfe8ff });
           this.vfx.spawnParticles(p.pos.x + Math.sin(a) * range * 0.6, 1.0, p.pos.z + Math.cos(a) * range * 0.6, 12,
             { color: 0xdfe8ff, speed: 11, life: 0.35, size: 0.8, up: 2.4, grav: -14 });
           this.vfx.flash(p.pos.x + Math.sin(a) * range * 0.5, 1.2, p.pos.z + Math.cos(a) * range * 0.5, 0xbcd4ff, 1.1);
           this.game.shake(0.1 + Math.min(0.2, hits * 0.03));
+          if (hits > 0) this.game.hitstop(0.045);
         };
         swing(1);
         if (lvl >= 3) setTimeout(() => this.game.state === 'playing' && swing(-1), 190);
@@ -1005,6 +1041,7 @@ export class WeaponSystem {
     this.vfx.spawnParticles(e.x, 0.9, e.z, 16, { color: 0xcfe8ff, speed: 13, life: 0.4, size: 0.8, up: 4, grav: -18 });
     this.vfx.flash(e.x, 1.4, e.z, 0x9fd0ff, 1.6);
     this.game.shake(0.12);
+    this.game.hitstop(0.035);
     this.hitEnemy(e, dmg, { freeze: lvl >= 5 ? 0.5 : 0, hitColor: 0x9fd0ff });
     SFX.throwKnife();
   }
@@ -1032,6 +1069,7 @@ export class WeaponSystem {
 
   _updateFangs(dt, elapsed) {
     const w = this.owned.get('fangs');
+    this._rankMul = WeaponSystem.rankDamage(w.level);
     const b = w.def.base;
     const lvl = w.level;
     const s = this.player.stats;
@@ -1082,6 +1120,7 @@ export class WeaponSystem {
 
   _updatePyre(dt, elapsed) {
     const w = this.owned.get('pyre');
+    this._rankMul = WeaponSystem.rankDamage(w.level);
     const b = w.def.base;
     const lvl = w.level;
     const s = this.player.stats;
@@ -1126,6 +1165,7 @@ export class WeaponSystem {
 
   _updateCenser(dt, elapsed) {
     const w = this.owned.get('censer');
+    this._rankMul = WeaponSystem.rankDamage(w.level);
     const b = w.def.base;
     const lvl = w.level;
     const s = this.player.stats;
@@ -1158,6 +1198,7 @@ export class WeaponSystem {
 
   _updateHounds(dt, elapsed) {
     const w = this.owned.get('hound');
+    this._rankMul = WeaponSystem.rankDamage(w.level);
     const b = w.def.base;
     const lvl = w.level;
     const count = lvl >= 5 ? 3 : lvl >= 3 ? 2 : 1;
@@ -1364,8 +1405,10 @@ export class WeaponSystem {
       if (s.life <= 0) { s.mesh.visible = false; continue; }
       const t = s.life / s.maxLife;
       // Snap out fast, then linger — reads as a strike rather than a fade.
+      const prog = 1 - t;
       s.mesh.material.opacity = Math.min(1, t * 1.9) * 0.72;
       s.mesh.scale.multiplyScalar(1 + dt * 2.6);
+      if (s.sweep) s.mesh.rotation.y = s.baseYaw + s.sweep * (1 - Math.pow(1 - prog, 2));
     }
   }
 

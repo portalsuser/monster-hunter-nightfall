@@ -37,6 +37,8 @@ class Game {
     this.portals = new PortalsBridge();
 
     this._shake = 0;
+    this._hitstop = 0;
+    this._hitstopCd = 0;
     this._clock = new THREE.Clock();
     this._camTarget = new THREE.Vector3();
     this._lanternPos = new THREE.Vector3();
@@ -162,6 +164,8 @@ class Game {
     this.victory = false;
     this.pendingLevelUps = 0;
     this._shake = 0;
+    this._hitstop = 0;
+    this._hitstopCd = 0;
 
     this.enemies.reset();
     this.weapons.reset();
@@ -212,6 +216,21 @@ class Game {
 
   shake(amount) {
     this._shake = Math.min(1.4, this._shake + amount);
+  }
+
+  /**
+   * Hit-stop: briefly crawl the simulation on a heavy connect. This is the
+   * cheapest way to make a blow feel like it has mass — the frame hangs on the
+   * moment of contact — and it changes no radius, damage or timing budget,
+   * because the clock itself slows rather than anything being skipped.
+   */
+  hitstop(seconds) {
+    // Rate-limited, and deliberately hard. With every weapon maxed, crits land
+    // continuously — without this the duty cycle approached 100% and the whole
+    // game ran in slow motion. Capped at ~10% of wall-clock time.
+    if (this._hitstopCd > 0) return;
+    this._hitstop = Math.min(0.05, seconds);
+    this._hitstopCd = 0.5;
   }
 
   toast(text, color) {
@@ -292,9 +311,14 @@ class Game {
   }
 
   _choose(card) {
+    // A pick is only valid against a queued level up. Without this, a stray
+    // second fire spent another of the 20 enhancements and drove
+    // pendingLevelUps negative, which silently swallowed later level ups.
+    if (this.pendingLevelUps <= 0) return;
+
     const res = applyUpgrade(card, this.weapons, this.player);
     this.player.levelUps++;
-    this.pendingLevelUps--;
+    this.pendingLevelUps = Math.max(0, this.pendingLevelUps - 1);
     this.toast(res.label, card.color);
     if (res.gainedLevels) this.queueLevelUps(res.gainedLevels);
 
@@ -306,7 +330,7 @@ class Game {
     } else {
       this.state = this.player.alive ? 'playing' : 'over';
       if (this.player.levelUps >= CFG.MAX_LEVEL_UPS) {
-        this.toast('All 20 enhancements taken — you are fully forged.', '#ffd23c');
+        this.toast('Every rank maxed — you are fully forged.', '#ffd23c');
       }
     }
   }
@@ -374,7 +398,15 @@ class Game {
     this.renderer.render(this.scene, this.camera);
   }
 
-  _step(dt) {
+  _step(rawDt) {
+    // Hit-stop scales time for everything downstream, so animation, physics and
+    // the run clock all slow together and nothing desyncs.
+    let dt = rawDt;
+    if (this._hitstopCd > 0) this._hitstopCd = Math.max(0, this._hitstopCd - rawDt);
+    if (this._hitstop > 0) {
+      this._hitstop = Math.max(0, this._hitstop - rawDt);
+      dt = rawDt * 0.25;
+    }
     this.elapsed += dt;
 
     const move = this.input.update();
@@ -382,6 +414,15 @@ class Game {
     this.world.update(dt, this.player.pos.x, this.player.pos.z, this.elapsed);
     this.player.lanternWorld(this._lanternPos);
     this.world.setLanternAt(this._lanternPos.x, this._lanternPos.y + 0.3, this._lanternPos.z);
+
+    // Watchdog: a queued level up must never sit unopened. Whatever the cause
+    // — a dropped callback, a grant that arrived mid-frame while the card
+    // screen was already up — this guarantees the player always gets the pick
+    // they earned rather than watching a full XP bar do nothing.
+    if (this.pendingLevelUps > 0) {
+      this._openLevelUp();
+      return;
+    }
 
     this.enemies.update(dt, this.player, this.elapsed);
     this.weapons.update(dt, this.elapsed);

@@ -92,14 +92,22 @@ export function rollUpgrades(weaponSystem, player, count = 3) {
 function makeCard(key, level, kind) {
   if (kind === 'weapon') {
     const def = WEAPONS[key];
+    // Ranks 1-5 have hand-written milestone text. Past that the weapon scales
+    // numerically, so describe that rather than showing `undefined`.
+    const text = level === 1
+      ? def.desc
+      : level <= def.levels.length
+        ? def.levels[level - 1]
+        : 'Sharper still — more damage and quicker recovery.';
     return {
       key, kind, level,
       name: def.name,
       icon: def.icon,
       color: def.color,
-      text: level === 1 ? def.desc : def.levels[level - 1],
+      text,
       isNew: level === 1,
       maxLevel: def.maxLevel,
+      milestone: level <= def.levels.length,
     };
   }
   const def = PASSIVES[key];
