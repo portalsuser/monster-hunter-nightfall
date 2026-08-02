@@ -35,7 +35,7 @@ export const CFG = {
     treesPerTile: 26,
     rocksPerTile: 7,
     fogColor: 0x05070c,
-    fogDensity: 0.021,
+    fogDensity: 0.0125,
     groundColor: 0x11180f,
   },
 

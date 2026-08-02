@@ -24,7 +24,7 @@ function makeGroundTexture() {
   c.width = c.height = S;
   const g = c.getContext('2d');
 
-  g.fillStyle = '#131a10';
+  g.fillStyle = '#26301d';
   g.fillRect(0, 0, S, S);
 
   // Soft blotches of moss and dirt.
@@ -33,7 +33,7 @@ function makeGroundTexture() {
     const y = Math.random() * S;
     const r = 4 + Math.random() * 26;
     const shade = Math.random();
-    const col = shade < 0.45 ? [26, 38, 20] : shade < 0.8 ? [18, 24, 14] : [34, 30, 18];
+    const col = shade < 0.45 ? [48, 66, 36] : shade < 0.8 ? [34, 44, 26] : [60, 54, 32];
     const grd = g.createRadialGradient(x, y, 0, x, y, r);
     grd.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},0.75)`);
     grd.addColorStop(1, 'rgba(0,0,0,0)');
@@ -92,11 +92,11 @@ export class World {
     scene.background = new THREE.Color(CFG.WORLD.fogColor);
 
     // Cold ambient bounce — keeps shadowed sides readable without flattening.
-    const hemi = new THREE.HemisphereLight(0x3d5a80, 0x0a0d06, 0.55);
+    const hemi = new THREE.HemisphereLight(0x4a6b96, 0x12180d, 1.05);
     scene.add(hemi);
 
     // Moonlight. Deliberately dim and blue; the lantern does the real work.
-    const moon = new THREE.DirectionalLight(0x9fc4ff, 0.85);
+    const moon = new THREE.DirectionalLight(0xaed0ff, 1.55);
     moon.position.set(-24, 40, -18);
     moon.castShadow = true;
     moon.shadow.mapSize.set(1024, 1024);
@@ -114,12 +114,12 @@ export class World {
     this.moon = moon;
 
     // Warm lantern carried by the hunter — repositioned each frame.
-    const lantern = new THREE.PointLight(0xffa64d, 26, 26, 1.9);
+    const lantern = new THREE.PointLight(0xffb057, 34, 30, 1.7);
     lantern.position.set(0, 2.2, 0);
     scene.add(lantern);
     this.lantern = lantern;
 
-    scene.add(new THREE.AmbientLight(0x1b2436, 0.6));
+    scene.add(new THREE.AmbientLight(0x2a3450, 0.95));
   }
 
   _buildGround() {
@@ -141,12 +141,12 @@ export class World {
     // A dark vignette ring that sits just above the ground and fades the world
     // out toward the fog — sells the "deep forest" feel far cheaper than fog
     // alone at this camera angle.
-    const ringGeo = new THREE.RingGeometry(28, 62, 48, 1);
+    const ringGeo = new THREE.RingGeometry(36, 62, 48, 1);
     ringGeo.rotateX(-Math.PI / 2);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0x02040a,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.3,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
@@ -162,7 +162,7 @@ export class World {
     // --- pine trunks -------------------------------------------------------
     const trunkGeo = new THREE.CylinderGeometry(0.17, 0.3, 3.2, 6, 1);
     trunkGeo.translate(0, 1.6, 0);
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x2b2118, roughness: 0.95 });
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d3123, roughness: 0.95 });
     this.trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, total);
     this.trunks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.trunks.castShadow = true;
@@ -174,8 +174,8 @@ export class World {
     lowGeo.translate(0, 1.7, 0);
     const topGeo = new THREE.ConeGeometry(1.05, 3.0, 7, 1);
     topGeo.translate(0, 1.5, 0);
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x15301c, roughness: 0.9, flatShading: true });
-    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x1b3b23, roughness: 0.9, flatShading: true });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x21452a, roughness: 0.9, flatShading: true });
+    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x2a5433, roughness: 0.9, flatShading: true });
 
     this.foliageLow = new THREE.InstancedMesh(lowGeo, leafMat, total);
     this.foliageTop = new THREE.InstancedMesh(topGeo, leafMat2, total);
@@ -189,7 +189,7 @@ export class World {
     // --- rocks / stumps ----------------------------------------------------
     const rockTotal = this.grid * this.grid * this.rocksPerTile;
     const rockGeo = new THREE.DodecahedronGeometry(0.6, 0);
-    const rockMat = new THREE.MeshStandardMaterial({ color: 0x2a2e33, roughness: 1, flatShading: true });
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x3c424a, roughness: 1, flatShading: true });
     this.rocks = new THREE.InstancedMesh(rockGeo, rockMat, rockTotal);
     this.rocks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.rocks.castShadow = true;
