@@ -181,7 +181,7 @@ function frame(input = { x: 0, z: 0 }) {
 /** Auto-pick the first card whenever a level up opens. */
 let picks = 0;
 const origShowLevelUp = game.hud.showLevelUp.bind(game.hud);
-game.hud.showLevelUp = (cards, remaining, onPick) => {
+const autoPickLevelUp = (cards, remaining, onPick) => {
   origShowLevelUp(cards, remaining, onPick);
   if (!cards.length) fail('level up offered zero cards');
   for (const c of cards) {
@@ -193,6 +193,7 @@ game.hud.showLevelUp = (cards, remaining, onPick) => {
   realSetTimeout(() => {}, 0);
   onPick(fresh);
 };
+game.hud.showLevelUp = autoPickLevelUp;
 
 
 // --- NaN tripwire (debug) ---------------------------------------------------
@@ -473,7 +474,7 @@ console.log('\u25b6 phase 8 \u2014 level-up integrity');
   console.log(`   6 level ups, ${opened} card screens, ${game.player.levelUps} picks spent, pending=${game.pendingLevelUps}`);
 
   // And the watchdog must recover a queued level up that never opened.
-  game.hud.showLevelUp = origShowLevelUp;
+  game.hud.showLevelUp = autoPickLevelUp;
   game.hud.hideLevelUp();
   game.state = 'playing';
   game.pendingLevelUps = 1;
@@ -487,7 +488,7 @@ console.log('\u25b6 phase 8 \u2014 level-up integrity');
   for (let i = 0; i < 5 && !recovered; i++) frame();
   if (!recovered) fail('watchdog did not reopen a stranded level up');
   if (game.player.levelUps !== before + 1) fail('watchdog pick did not apply');
-  game.hud.showLevelUp = origShowLevelUp;
+  game.hud.showLevelUp = autoPickLevelUp;
   console.log('   stranded level up recovered by the watchdog');
 
   // The 20 cap must still hold exactly.
@@ -501,7 +502,7 @@ console.log('\u25b6 phase 8 \u2014 level-up integrity');
     fail(`${over} level ups produced ${game.player.levelUps} picks, expected exactly ${CFG.MAX_LEVEL_UPS}`);
   }
   console.log(`   ${over} level ups clamp to exactly ${game.player.levelUps} picks`);
-  game.hud.showLevelUp = origShowLevelUp;
+  game.hud.showLevelUp = autoPickLevelUp;
   game.restart();
 }
 
@@ -530,16 +531,38 @@ console.log('▶ phase 9 — dodge roll and stamina');
   p.dodge({ x: 1, z: 0 });
   if (p.dodge({ x: 1, z: 0 })) fail('a second dodge started while the first was still running');
 
-  // Travel: a roll has to actually move the hunter, and finish on its own.
+  // Travel. The number that matters is not the raw distance but how far the
+  // roll clears you *beyond a normal stride over the same time* — the first
+  // version covered 2.8 units against 1.0 of running, a net gain of under half
+  // the hunter's height, and read on screen as nothing happening at all.
   game.restart();
-  const x0 = p.pos.x;
-  p.dodge({ x: 1, z: 0 });
+  const RUN = { x: 1, z: 0 };
+  const rollFrames = Math.ceil(CFG.DODGE.duration * 60);
+  let a0 = p.pos.x;
+  for (let i = 0; i < rollFrames; i++) frame(RUN);
+  const runDist = Math.abs(p.pos.x - a0);
+
+  game.restart();
+  p.dodgeCd = 0;
+  if (!p.dodge(RUN)) fail('dodge refused to start on a full stamina bar');
+  a0 = p.pos.x;
   let guard = 0;
-  while (p.dodgeTime > 0 && guard++ < 200) frame();
-  const travelled = Math.abs(p.pos.x - x0);
+  while (p.dodgeTime > 0 && guard++ < 200) frame(RUN);
+  const rollDist = Math.abs(p.pos.x - a0);
   if (guard >= 200) fail('dodge never ended');
-  if (travelled < 1.5) fail(`dodge only travelled ${travelled.toFixed(2)} units`);
   if (!Number.isFinite(p.pos.x) || !Number.isFinite(p.pos.z)) fail('dodge produced a NaN position');
+
+  // The hunter is 2 units tall at 1x and CFG.SCALE.player scales him up, so a
+  // roll has to clear at least one body length past a stride to be legible.
+  const bodyLength = 2 * CFG.SCALE.player;
+  const gain = rollDist - runDist;
+  if (gain < bodyLength) {
+    fail(`a roll clears only ${gain.toFixed(2)} units past a normal stride `
+      + `(${rollDist.toFixed(2)} vs ${runDist.toFixed(2)}); needs at least one `
+      + `body length (${bodyLength}) to be visible`);
+  }
+  console.log(`   roll covers ${rollDist.toFixed(1)}u vs ${runDist.toFixed(1)}u running `
+    + `— ${(gain / bodyLength).toFixed(1)} body lengths of daylight`);
 
   // I-frames: damage during the roll must be fully absorbed.
   game.restart();
@@ -592,6 +615,36 @@ console.log('▶ phase 9 — dodge roll and stamina');
   if (seen === 0) fail('Sure-Footed never appeared in 600 level-up screens');
   if (rate > 0.5) fail(`Sure-Footed appeared on ${(rate * 100).toFixed(0)}% of screens — not rare`);
   console.log(`   Sure-Footed offered on ${(rate * 100).toFixed(0)}% of card screens`);
+
+  // Abandon Hunt must END the run, not quietly start a new one. It used to
+  // call restart(), which drops you straight back into the forest — from the
+  // player's seat that is indistinguishable from pressing Resume.
+  game.restart();
+  for (let i = 0; i < 60 * 20; i++) frame({ x: 1, z: 0 });
+  // Twenty seconds of play usually ends mid-card-screen; settle back into
+  // 'playing' first, since pausing is only legal from there.
+  for (let i = 0; i < 30 && game.state !== 'playing'; i++) frame();
+  const runElapsed = game.elapsed;
+  const runKills = game.enemies.totalKills;
+  game.togglePause();
+  if (game.state !== 'paused') fail('Esc did not pause');
+  game.abandon();
+  if (game.state !== 'over') {
+    fail(`Abandon Hunt left the game in state '${game.state}' — it should end the run`);
+  }
+  if (p.alive) fail('Abandon Hunt left the hunter alive');
+  if (game.elapsed < runElapsed) fail('Abandon Hunt reset the run clock instead of ending the run');
+  if (game.enemies.totalKills !== runKills) fail('Abandon Hunt wiped the run stats');
+  if (game.score <= 0) fail('Abandon Hunt did not bank a score');
+  if (game.victory) fail('an abandoned run was scored as a victory');
+  if (!game.abandoned) fail('the abandoned flag was not set for the results screen');
+  console.log(`   Abandon Hunt ended the run at ${game.elapsed.toFixed(0) + "s"} with score ${game.score}`);
+
+  // And "Hunt Again" from the results screen still starts fresh.
+  game.restart();
+  if (game.state !== 'playing' || game.elapsed !== 0 || game.abandoned) {
+    fail('restart after abandoning did not begin a clean run');
+  }
 
   // A dodge must be impossible while dead, and survive a restart cleanly.
   game.restart();
