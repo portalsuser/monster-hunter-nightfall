@@ -471,6 +471,31 @@ button {
 }
 .pips i.on { background: var(--c); box-shadow: 0 0 8px -1px var(--c); }
 
+.rankbar {
+  position: relative;
+  margin-top: 12px;
+  height: 15px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.rankbar-fill {
+  height: 100%;
+  background: var(--c);
+  opacity: 0.55;
+}
+.rankbar-txt {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+  text-shadow: 0 1px 3px #000;
+}
+
 .hint { margin-top: 16px; font-size: 12px; color: var(--muted); letter-spacing: 0.1em; }
 .hint b { color: var(--ink); }
 
