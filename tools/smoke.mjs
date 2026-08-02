@@ -84,6 +84,9 @@ class El {
   remove() {}
   querySelector() { return new El(); }
   querySelectorAll() { return []; }
+  // Enough of `closest` for the "did this touch start on the roll button"
+  // guard: elements know their own registered id and nothing else.
+  closest(sel) { return sel === `#${this.id}` ? this : null; }
   addEventListener(type, fn) { (this.handlers[type] ||= []).push(fn); }
   removeEventListener() {}
   getContext(kind) { return kind === '2d' ? makeCtx2D() : null; }
@@ -98,7 +101,11 @@ const document_ = {
   head: new El('head'),
   documentElement: new El('html'),
   getElementById(id) {
-    if (!registry.has(id)) registry.set(id, new El());
+    if (!registry.has(id)) {
+      const el = new El();
+      el.id = id;
+      registry.set(id, el);
+    }
     return registry.get(id);
   },
   createElement(tag) { return new El(tag); },
@@ -816,8 +823,15 @@ console.log('▶ phase 11 — levels, boss clears and the sweep');
   const kills0 = E.totalKills;
   const parts0 = game.player.parts_collected;
 
+  const bx = E.bosses[0].x, bz = E.bosses[0].z;
   E.kill(E.bosses[0]);
   if (!game.levelPhase) fail('killing the boss did not start the level clear');
+  // The hoard lands where the boss fell. Whether the hunter happens to be
+  // standing there is luck, and this phase is about the sweep, not about
+  // pickup magnetism — so walk him onto it rather than let the assertion
+  // below flake on distance.
+  game.player.pos.x = bx;
+  game.player.pos.z = bz;
 
   // Through the sweep, then the breather.
   if (!until(() => game.levelPhase !== 'clearing', 30)) fail('the sweep never finished');
@@ -1176,6 +1190,83 @@ console.log('▶ phase 14 — Second Wind');
   console.log(`   all ${charges} charges spend correctly, explosions included`);
   game.restart();
   if (game.player.revivesUsed !== 0) fail('restart did not clear spent revives');
+}
+
+console.log('▶ phase 15 — touch and gamepad dodge');
+{
+  // A phone has no Space bar. If the roll button does not reach the same code
+  // path the key does, the dodge — and the entire stamina system built on it —
+  // does not exist on mobile, however well it works on a desktop.
+  game.restart();
+  game.state = 'playing';
+  const P = game.player;
+  const btn = document.getElementById('dodge-btn');
+  const stick = document.getElementById('stick');
+
+  const tap = () => {
+    const handlers = btn.handlers.touchstart || [];
+    if (!handlers.length) fail('roll button has no touchstart handler');
+    handlers.forEach((fn) => fn({
+      target: btn, changedTouches: [{ identifier: 1, clientX: 900, clientY: 600 }],
+      preventDefault() {}, stopPropagation() {},
+    }));
+  };
+
+  P.stats.stamina = P.stats.staminaMax;
+  P.dodgeCd = 0; P.dodgeTime = 0;
+  const before = P.stats.stamina;
+  const fromX = P.pos.x, fromZ = P.pos.z;
+  tap();
+  if (P.stats.stamina >= before) fail('tapping the roll button spent no stamina');
+  if (P.dodgeTime <= 0) fail('tapping the roll button did not start a roll');
+  for (let i = 0; i < 30; i++) game._step(1 / 60);
+  const travelled = Math.hypot(P.pos.x - fromX, P.pos.z - fromZ);
+  if (travelled < 3) fail(`touch roll only covered ${travelled.toFixed(2)}u`);
+  console.log(`   a tap rolls ${travelled.toFixed(1)}u for ${Math.round(before - P.stats.stamina)} stamina`);
+
+  // The thumbstick listens on the whole canvas. If it does not ignore presses
+  // that began on the button, every roll also yanks the hunter sideways.
+  game.input.touch.active = false;
+  const stickStart = (game.renderer.domElement.handlers.touchstart || []);
+  if (!stickStart.length) fail('no touchstart bound for the thumbstick');
+  stickStart.forEach((fn) => fn({
+    target: btn, changedTouches: [{ identifier: 2, clientX: 900, clientY: 600 }],
+    preventDefault() {}, stopPropagation() {},
+  }));
+  if (game.input.touch.active) fail('a press on the roll button also grabbed the thumbstick');
+  stickStart.forEach((fn) => fn({
+    target: stick, changedTouches: [{ identifier: 3, clientX: 200, clientY: 600 }],
+    preventDefault() {}, stopPropagation() {},
+  }));
+  if (!game.input.touch.active) fail('a press away from the button failed to grab the thumbstick');
+  console.log('   the button swallows its own press; the stick still takes every other one');
+
+  // Gamepad face button, edge-triggered: holding A must not chain rolls.
+  // The 30 frames above may have opened a level-up screen, which swallows
+  // Space by design; put the run back in the playing state first.
+  game.state = 'playing';
+  game.input.touch.active = false;
+  P.stats.stamina = P.stats.staminaMax;
+  P.dodgeCd = 0; P.dodgeTime = 0;
+  const pad = { axes: [0, 0], buttons: [{ pressed: true }] };
+  navigator.getGamepads = () => [pad];
+  let rolls = 0;
+  // The harness stubs input.update() for deterministic movement, so reach
+  // past it to the real one.
+  const poll = () => Object.getPrototypeOf(game.input).update.call(game.input);
+  poll();
+  if (P.dodgeTime > 0) rolls++;
+  P.dodgeCd = 0; P.dodgeTime = 0;
+  poll();                        // still held — must not fire again
+  if (P.dodgeTime > 0) fail('holding the gamepad button chained a second roll');
+  pad.buttons[0].pressed = false;
+  poll();
+  pad.buttons[0].pressed = true;
+  poll();
+  if (P.dodgeTime > 0) rolls++;
+  navigator.getGamepads = () => [];
+  if (rolls !== 2) fail(`gamepad dodge fired ${rolls} times across two presses`);
+  console.log('   gamepad A rolls once per press, never on the hold');
 }
 
 // --- Report ------------------------------------------------------------------
