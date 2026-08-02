@@ -7,6 +7,7 @@ else you take off the monsters you kill.
 
 ```
 WASD / arrows / touch stick   move          (weapons fire on their own)
+Space                          dodge roll    (0.5s invulnerable, costs stamina)
 1 2 3                          pick an enhancement
 Esc / P                        pause
 M                              mute
@@ -25,6 +26,11 @@ M                              mute
   and 6 passives at once, so a run tops out at 240 enhancements. Ranks 1-5 are
   hand-written milestones; past that a weapon keeps gaining damage and shedding
   cooldown.
+- **Dodge on Space.** The hunter rolls in whatever direction he is already
+  moving, with half a second of invulnerability — roll *through* a charge
+  rather than away from it. Each roll spends a third of the stamina bar under
+  your health, which refills in about 1.7 seconds per roll. Direction is locked
+  once the roll starts, so it is a commitment, not a free sprint.
 - **A boss every 3 minutes.** It drops a large hoard of parts, a fistful of
   health, and a guaranteed **bonus enhancement**.
 - **Chests** appear as you run. Break them by walking into them or hitting them.
@@ -52,8 +58,11 @@ and spawn density all climb, and new monster types unlock on a schedule.
 | ❄️ | **Frost Vial** | Freezes a bloom of enemies. Frozen targets take double damage at rank 5. |
 | 🐺 | **Spirit Hound** | Up to 3 spectral wolves that hunt independently. |
 
-Plus 11 passives: Might, Alacrity, Swiftshod, Ironhide, Vigor, Lodestone, Wide
-Sweep, Keen Edge, Bloodhound, Slow Mending, and Second Wind (a revive).
+Plus 12 passives: Might, Alacrity, Swiftshod, Ironhide, Vigor, Lodestone, Wide
+Sweep, Keen Edge, Bloodhound, Slow Mending, Second Wind (a revive), and
+**Sure-Footed** — the odd one out. It deepens the stamina pool so you can roll
+more often, caps at **rank 5** rather than 20, and the card pool culls it so it
+turns up on roughly 5% of early screens instead of every other one.
 
 ## Monsters
 
