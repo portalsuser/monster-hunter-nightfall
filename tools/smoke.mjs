@@ -317,7 +317,7 @@ if (game.player.levelUps > CFG.MAX_LEVEL_UPS) {
 
 // Pools must not leak across a long run.
 const leaks = [
-  ['vfx particles', game.vfx.particles.filter((p) => p.alive).length, 900],
+  ['vfx particles', game.vfx.particles.filter((p) => p.alive).length, CFG.MAX_PARTICLES],
   ['weapon projectiles', game.weapons.projectiles.filter((p) => p.alive).length, 220],
   ['enemy projectiles', game.enemies.projectiles.filter((p) => p.alive).length, 110],
   ['ground effects', game.weapons.grounds.filter((g) => g.alive).length, 22],
@@ -414,7 +414,10 @@ console.log('▶ phase 7 — frame cost with a saturated horde');
   game.player.stats.hp = 1e9;
   // Fast-forward the difficulty clock so waves arrive at late-run density.
   game.elapsed = 900;
-  for (let i = 0; i < 60 * 20; i++) { frame(KITE()); steps++; }
+  // Longer warm-up: the standing population takes a while to reach steady
+  // state now that monsters are larger (separation spreads them out) and
+  // hit-stop slightly slows the clock.
+  for (let i = 0; i < 60 * 45; i++) { frame(KITE()); steps++; }
 
   const alive = game.enemies.enemies.length;
   const t0 = process.hrtime.bigint();
@@ -425,7 +428,74 @@ console.log('▶ phase 7 — frame cost with a saturated horde');
   // Budget: at 60fps a frame is 16.7ms and the GPU needs most of it. Simulation
   // has to stay well under a third of that even at max density.
   if (ms > 5) fail(`simulation costs ${ms.toFixed(2)} ms/frame with ${alive} enemies — too slow for 60fps`);
-  if (alive < 150) fail(`late-game horde only reached ${alive} enemies; density check is not meaningful`);
+  // Threshold tracks CFG.DENSITY (0.65). Raise/lower it if density changes.
+  if (alive < 95) fail(`late-game horde only reached ${alive} enemies; density check is not meaningful`);
+}
+
+// --- Phase 8: level-up integrity (regression) -------------------------------
+// A stray second fire on one card screen used to spend TWO of the 20
+// enhancements and drive pendingLevelUps negative, which silently swallowed
+// every later level up — the XP bar filled and nothing happened, permanently.
+console.log('\u25b6 phase 8 \u2014 level-up integrity');
+{
+  game.restart();
+  game.player.levelUps = 0;
+  game.pendingLevelUps = 0;
+
+  // Double-fire the picker the way a double-click does.
+  let opened = 0;
+  game.hud.showLevelUp = (cards, remaining, onPick) => {
+    opened++;
+    game.hud._levelUpOpen = true;
+    onPick(cards[0]);
+    onPick(cards[0]);   // the stray one — must be ignored
+    onPick(cards[0]);
+  };
+
+  for (let i = 0; i < 6; i++) game.queueLevelUps(1);
+
+  if (game.pendingLevelUps < 0) {
+    fail(`pendingLevelUps went negative (${game.pendingLevelUps}) after double-fires`);
+  }
+  if (game.player.levelUps !== opened) {
+    fail(`${opened} card screens spent ${game.player.levelUps} picks — stray fires are being counted`);
+  }
+  if (opened !== 6) {
+    fail(`6 queued level ups produced only ${opened} card screens`);
+  }
+  console.log(`   6 level ups, ${opened} card screens, ${game.player.levelUps} picks spent, pending=${game.pendingLevelUps}`);
+
+  // And the watchdog must recover a queued level up that never opened.
+  game.hud.showLevelUp = origShowLevelUp;
+  game.hud.hideLevelUp();
+  game.state = 'playing';
+  game.pendingLevelUps = 1;
+  const before = game.player.levelUps;
+  let recovered = false;
+  game.hud.showLevelUp = (cards, remaining, onPick) => {
+    recovered = true;
+    game.hud._levelUpOpen = true;
+    onPick(cards[0]);
+  };
+  for (let i = 0; i < 5 && !recovered; i++) frame();
+  if (!recovered) fail('watchdog did not reopen a stranded level up');
+  if (game.player.levelUps !== before + 1) fail('watchdog pick did not apply');
+  game.hud.showLevelUp = origShowLevelUp;
+  console.log('   stranded level up recovered by the watchdog');
+
+  // The 20 cap must still hold exactly.
+  game.restart();
+  game.player.levelUps = 0;
+  game.pendingLevelUps = 0;
+  game.hud.showLevelUp = (cards, remaining, onPick) => { game.hud._levelUpOpen = true; onPick(cards[0]); };
+  const over = CFG.MAX_LEVEL_UPS + 25;
+  for (let i = 0; i < over; i++) game.queueLevelUps(1);
+  if (game.player.levelUps !== CFG.MAX_LEVEL_UPS) {
+    fail(`${over} level ups produced ${game.player.levelUps} picks, expected exactly ${CFG.MAX_LEVEL_UPS}`);
+  }
+  console.log(`   ${over} level ups clamp to exactly ${game.player.levelUps} picks`);
+  game.hud.showLevelUp = origShowLevelUp;
+  game.restart();
 }
 
 // --- Report ------------------------------------------------------------------
