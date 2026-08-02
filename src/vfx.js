@@ -13,6 +13,40 @@ export class VFX {
     this._buildParticles();
     this._buildRings();
     this._buildNumbers();
+    this._buildFlash();
+  }
+
+  /**
+   * A single roaming point light that snaps to whatever just got hit and decays.
+   * One light covers every impact in the frame — adding one per hit would
+   * recompile shaders and tank the frame rate.
+   */
+  _buildFlash() {
+    this.flashLight = new THREE.PointLight(0xffd9a0, 0, 14, 2);
+    this.flashLight.position.set(0, 2, 0);
+    this.scene.add(this.flashLight);
+    this._flash = 0;
+    this._flashPeak = 0;
+  }
+
+  flash(x, y, z, color = 0xffd9a0, power = 1) {
+    // Only take over the light if this hit is at least as loud as the current
+    // one, so a stream of chip damage cannot stomp a big crit.
+    if (power < this._flashPeak * this._flash) return;
+    this.flashLight.position.set(x, y + 0.4, z);
+    this.flashLight.color.set(color);
+    this._flash = 1;
+    this._flashPeak = power;
+  }
+
+  /** Standard hit dressing: sparks, a light pop, optional shock ring. */
+  impact(x, y, z, opts = {}) {
+    const { color = 0xffe9b0, n = 5, speed = 7, ring = 0, power = 0.8, size = 0.7 } = opts;
+    this.spawnParticles(x, y, z, n, {
+      color, speed, life: 0.3, size, up: 2.6, grav: -16, drag: 0.05,
+    });
+    this.flash(x, y, z, color, power);
+    if (ring > 0) this.ring(x, z, 0.3, ring, color, 0.3, Math.max(0.15, y * 0.5));
   }
 
   // -------------------------------------------------------------------------
@@ -111,7 +145,7 @@ export class VFX {
   // Expanding ground rings (explosions, boss slams, level-up bursts)
   // -------------------------------------------------------------------------
   _buildRings() {
-    const MAX = 24;
+    const MAX = 40;
     this.rings = [];
     const geo = new THREE.RingGeometry(0.72, 1.0, 80);
     geo.rotateX(-Math.PI / 2);
@@ -150,7 +184,7 @@ export class VFX {
       const t = 1 - r.life / r.maxLife;
       const s = r.from + (r.to - r.from) * (1 - Math.pow(1 - t, 2));
       r.mesh.scale.setScalar(s);
-      r.mesh.material.opacity = 0.75 * (1 - t);
+      r.mesh.material.opacity = 0.95 * (1 - t) * (1 - t * 0.3);
     }
   }
 
@@ -247,6 +281,12 @@ export class VFX {
   }
 
   update(dt) {
+    if (this._flash > 0) {
+      this._flash = Math.max(0, this._flash - dt * 5.5);
+      // Squared falloff reads as a pop rather than a fade.
+      this.flashLight.intensity = this._flash * this._flash * 26 * this._flashPeak;
+      if (this._flash === 0) this._flashPeak = 0;
+    }
     this._updateParticles(dt);
     this._updateRings(dt);
     this._updateNumbers(dt);
@@ -254,8 +294,8 @@ export class VFX {
 
   // Convenience presets ------------------------------------------------------
   bloodBurst(x, y, z, color = 0x7d1f2a, big = false) {
-    this.spawnParticles(x, y, z, big ? 22 : 9, {
-      color, speed: big ? 7 : 4.5, life: big ? 0.8 : 0.5, size: big ? 1.4 : 0.85, up: big ? 3.5 : 2,
+    this.spawnParticles(x, y, z, big ? 34 : 16, {
+      color, speed: big ? 9 : 6, life: big ? 0.9 : 0.55, size: big ? 1.6 : 1.0, up: big ? 4 : 2.6,
     });
   }
 
@@ -268,5 +308,8 @@ export class VFX {
     for (const r of this.rings) { r.life = 0; r.mesh.visible = false; }
     for (const n of this.numbers) { n.life = 0; n.sprite.visible = false; }
     this.pMesh.count = 0;
+    this._flash = 0;
+    this._flashPeak = 0;
+    this.flashLight.intensity = 0;
   }
 }

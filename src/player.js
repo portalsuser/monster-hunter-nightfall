@@ -3,8 +3,8 @@ import { CFG } from './config.js';
 import { clamp, damp, TAU } from './utils.js';
 
 const PAL = {
-  cloak: 0x2f2419,
-  cloakDark: 0x1d1610,
+  coat: 0x2a2118,
+  coatDark: 0x17110b,
   leather: 0x4a3320,
   leatherDark: 0x30210f,
   metal: 0x8d949c,
@@ -104,29 +104,61 @@ function buildHunter() {
   scarf.scale.z = 0.85;
 
   // ---- hood + cloak ------------------------------------------------------
-  const hood = add(body, new THREE.Mesh(new THREE.SphereGeometry(0.36, 28, 20, 0, TAU, 0, Math.PI * 0.62), mat(PAL.cloak, 0.95)), 0, 1.74, -0.06);
+  const hood = add(body, new THREE.Mesh(new THREE.SphereGeometry(0.36, 28, 20, 0, TAU, 0, Math.PI * 0.62), mat(PAL.coat, 0.95)), 0, 1.74, -0.06);
   hood.scale.set(1.05, 1.0, 1.15);
 
-  const cloak = new THREE.Group();
-  cloak.position.set(0, 1.55, -0.16);
-  body.add(cloak);
-  parts.cloak = cloak;
-  const cloakGeo = new THREE.ConeGeometry(0.62, 1.5, 26, 10, true);
-  const cloakMesh = new THREE.Mesh(cloakGeo, new THREE.MeshStandardMaterial({
-    color: PAL.cloak, roughness: 0.95, flatShading: false, side: THREE.DoubleSide,
-  }));
-  cloakMesh.position.y = -0.72;
-  cloakMesh.castShadow = true;
-  cloak.add(cloakMesh);
+  const coat = new THREE.Group();
+  coat.position.set(0, 1.52, -0.04);
+  body.add(coat);
+  parts.cloak = coat;   // the animation code still refers to this as `cloak`
 
-  // Torn hem — a ring of small triangles at the bottom of the cloak.
-  const hemMat = new THREE.MeshStandardMaterial({ color: PAL.cloakDark, side: THREE.DoubleSide, flatShading: false, roughness: 1 });
-  for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * TAU;
-    const t = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 8), hemMat);
-    t.position.set(Math.cos(a) * 0.6, -1.55, Math.sin(a) * 0.6);
+  const COAT_GAP = 1.30;   // radians of opening across the front
+  const coatMat = new THREE.MeshStandardMaterial({
+    color: PAL.coat, roughness: 0.85, metalness: 0.05,
+    flatShading: false, side: THREE.DoubleSide,
+  });
+
+  // Three builds cylinders/cones with x = r*sin(theta), z = r*cos(theta), so
+  // theta 0 sits on +Z — the hunter's forward. Starting half a gap round and
+  // stopping half a gap short leaves the opening centred on his chest, which is
+  // what turns the old closed cone (a skirt) into a coat his legs show through.
+  const coatGeo = new THREE.ConeGeometry(0.56, 1.18, 24, 6, true, COAT_GAP / 2, TAU - COAT_GAP);
+  const coatMesh = new THREE.Mesh(coatGeo, coatMat);
+  coatMesh.position.y = -0.42;
+  coatMesh.castShadow = true;
+  coat.add(coatMesh);
+
+  // Two front panels hanging either side of the opening.
+  const panelGeo = new THREE.BoxGeometry(0.2, 1.06, 0.05);
+  [-1, 1].forEach((s2) => {
+    const panel = new THREE.Mesh(panelGeo, coatMat);
+    panel.position.set(s2 * 0.25, -0.44, 0.29);
+    panel.rotation.z = s2 * 0.07;
+    panel.rotation.x = -0.05;
+    panel.castShadow = true;
+    coat.add(panel);
+  });
+
+  // Lapels folded back over the chest.
+  const lapelMat = mat(PAL.coatDark, 0.8);
+  const lapelGeo = new THREE.BoxGeometry(0.15, 0.44, 0.05);
+  [-1, 1].forEach((s2) => {
+    const lapel = new THREE.Mesh(lapelGeo, lapelMat);
+    lapel.position.set(s2 * 0.2, 0.08, 0.30);
+    lapel.rotation.z = s2 * -0.36;
+    coat.add(lapel);
+  });
+
+  // Torn hem across the back arc only — the front stays open.
+  const hemMat = new THREE.MeshStandardMaterial({
+    color: PAL.coatDark, side: THREE.DoubleSide, flatShading: false, roughness: 1,
+  });
+  for (let i = 0; i < 8; i++) {
+    const a = COAT_GAP / 2 + (i / 7) * (TAU - COAT_GAP);
+    const t = new THREE.Mesh(new THREE.ConeGeometry(0.085, 0.26, 8), hemMat);
+    t.position.set(Math.sin(a) * 0.545, -1.05, Math.cos(a) * 0.545);
     t.rotation.x = Math.PI;
-    cloak.add(t);
+    coat.add(t);
   }
 
   // ---- pauldrons ---------------------------------------------------------
@@ -182,7 +214,7 @@ function buildHunter() {
     new THREE.MeshBasicMaterial({ color: 0xffc46b })), 0, 0, 0);
   parts.flame = flame;
 
-  g.scale.setScalar(1.0);
+  g.scale.setScalar(CFG.SCALE.player);
   return { group: g, parts };
 }
 

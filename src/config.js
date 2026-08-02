@@ -9,11 +9,19 @@ export const CFG = {
   BOSS_INTERVAL: 180,         // seconds between boss spawns (3 minutes)
   FIRST_BOSS_AT: 180,
 
+  // Visual scale. Gameplay radii are scaled alongside these in the modules that
+  // own them, so hitboxes keep matching what you can see.
+  SCALE: {
+    player: 2.0,     // the hunter reads as the hero of the frame
+    monster: 1.35,   // trash mobs; bosses are already large and stay as-is
+    reach: 1.35,     // melee arcs and auras, so they still look like they connect
+  },
+
   // ---- player --------------------------------------------------------------
   PLAYER: {
     maxHp: 120,
     speed: 5.2,
-    pickupRadius: 3.4,
+    pickupRadius: 4.3,
     iframes: 0.62,            // invulnerability after taking a hit
     regen: 0,                 // gained via upgrades
     turnLerp: 14,
@@ -81,7 +89,7 @@ export const CFG = {
 
   // ---- misc ----------------------------------------------------------------
   DAMAGE_NUMBERS: true,
-  MAX_PARTICLES: 900,
+  MAX_PARTICLES: 1300,
 };
 
 /** Difficulty scalars driven by elapsed run time (seconds). */

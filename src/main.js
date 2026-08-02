@@ -224,7 +224,7 @@ class Game {
     if (dealt > 0) {
       SFX.playerHurt();
       this.shake(0.35);
-      this.vfx.damageNumber(this.player.pos.x, 2.3, this.player.pos.z, dealt, { color: '#ff8a8a', prefix: '-' });
+      this.vfx.damageNumber(this.player.pos.x, 4.0, this.player.pos.z, dealt, { color: '#ff8a8a', prefix: '-' });
       if (!this.player.alive) this._gameOver();
     }
   }

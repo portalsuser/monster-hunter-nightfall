@@ -116,7 +116,7 @@ export const WEAPONS = {
       '+60% damage, knocks enemies back.',
       'Every 4th strike releases a shockwave.',
     ],
-    base: { dmg: 14, cd: 0.55, range: 2.4, arc: 1.6 },
+    base: { dmg: 14, cd: 0.55, range: 2.4 * CFG.SCALE.reach, arc: 1.6 },
   },
 
   knives: {
@@ -148,7 +148,7 @@ export const WEAPONS = {
       '+50% damage and reach.',
       'Full 360° whirlwind.',
     ],
-    base: { dmg: 26, cd: 1.3, range: 3.4, arc: 2.0 },
+    base: { dmg: 26, cd: 1.3, range: 3.4 * CFG.SCALE.reach, arc: 2.0 },
   },
 
   cross: {
@@ -197,7 +197,7 @@ export const WEAPONS = {
       '+35% radius, burn stacks harder.',
       'Erupts periodically in a fire nova.',
     ],
-    base: { dmg: 7, cd: 0.5, radius: 2.9 },
+    base: { dmg: 7, cd: 0.5, radius: 2.9 * CFG.SCALE.reach },
   },
 
   fangs: {
@@ -214,7 +214,7 @@ export const WEAPONS = {
       '5 daggers, wider orbit.',
       '7 daggers, they spin much faster.',
     ],
-    base: { dmg: 13, cd: 0.28, radius: 2.5, speed: 2.4 },
+    base: { dmg: 13, cd: 0.28, radius: 2.5 * CFG.SCALE.reach, speed: 2.4 },
   },
 
   sigil: {
@@ -263,7 +263,7 @@ export const WEAPONS = {
       'Pulses twice as often.',
       'Pulse leaves lingering smoke.',
     ],
-    base: { dmg: 11, cd: 1.6, radius: 3.4, knock: 9 },
+    base: { dmg: 11, cd: 1.6, radius: 3.4 * CFG.SCALE.reach, knock: 9 },
   },
 
   glaive: {
@@ -395,7 +395,7 @@ export class WeaponSystem {
   }
 
   _buildSlashes() {
-    const MAX = 8;
+    const MAX = 18;
     this.slashes = [];
     for (let i = 0; i < MAX; i++) {
       const geo = new THREE.RingGeometry(0.55, 1.0, 56, 2, 0, 2.0);
@@ -408,7 +408,7 @@ export class WeaponSystem {
       m.visible = false;
       m.renderOrder = 6;
       this.scene.add(m);
-      this.slashes.push({ mesh: m, life: 0, maxLife: 0.22 });
+      this.slashes.push({ mesh: m, life: 0, maxLife: 0.3 });
     }
   }
 
@@ -578,7 +578,27 @@ export class WeaponSystem {
       const d = Math.hypot(dx, dz) || 1;
       knock = { x: (dx / d) * knock, z: (dz / d) * knock };
     }
-    this.enemies.hurt(e, Math.round(dmg * mult), { ...opts, knock, crit });
+    const total = Math.round(dmg * mult);
+    this.enemies.hurt(e, total, { ...opts, knock, crit });
+
+    // Impact dressing. Crits get a much louder read so they stand out in a
+    // screen full of chip damage.
+    //
+    // `silent` marks aura and ground-effect ticks, which land on dozens of
+    // enemies at once — giving those the full treatment would drain the
+    // particle pool every frame and wash the screen out. They keep the crit
+    // pop, at reduced volume, and nothing else.
+    const hy = (e.isBoss ? 2.2 : 0.8 * (e.scale || 1)) + (e.y || 0);
+    if (crit) {
+      this.vfx.impact(e.x, hy, e.z, opts.silent
+        ? { color: 0xff7a4a, n: 6, speed: 9, power: 1.1, size: 0.9 }
+        : { color: 0xff7a4a, n: 16, speed: 12, ring: 2.6, power: 2.2, size: 1.1 });
+      if (!opts.silent) this.game.shake(0.22);
+    } else if (!opts.silent) {
+      this.vfx.impact(e.x, hy, e.z, {
+        color: opts.hitColor || 0xffe9b0, n: 4, speed: 7, power: 0.55, size: 0.65,
+      });
+    }
   }
 
   areaHit(x, z, radius, base, opts = {}) {
@@ -664,6 +684,7 @@ export class WeaponSystem {
       p.onExpire = cfg.onExpire || null;
       p.knock = cfg.knock || 0;
       p.scale = cfg.scale ?? 1;
+      p.trailColor = cfg.trailColor || 0xffe9b0;
       // Reset transient flags here rather than on death: a boomerang that
       // despawns by reaching the player short-circuits the death cleanup path.
       p.lob = null;
@@ -772,8 +793,11 @@ export class WeaponSystem {
         p.punch();
         SFX.punch();
         const fx = Math.sin(aim), fz = Math.cos(aim);
-        this.spawnSlash(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.9, arc, 0xffe0b0);
-        this.arcHit(range, arc, dmg, { aim, knock: lvl >= 4 ? 5 : 1.5 });
+        this.spawnSlash(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.95, arc, 0xffd9a0);
+        this.spawnSlash(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.62, arc, 0xfff4dc);
+        this.vfx.flash(p.pos.x + fx * range * 0.6, 1.2, p.pos.z + fz * range * 0.6, 0xffc879, 0.7);
+        const hits = this.arcHit(range, arc, dmg, { aim, knock: lvl >= 4 ? 5 : 1.5 });
+        if (hits > 0) this.game.shake(0.06 + Math.min(0.12, hits * 0.02));
 
         w.state.combo = (w.state.combo || 0) + 1;
         if (lvl >= 5 && w.state.combo % 4 === 0) {
@@ -827,9 +851,14 @@ export class WeaponSystem {
           const aim = this.aimAngle(range);
           const a = aim + (arc >= Math.PI * 2 ? 0 : side * 0.35);
           if (arc < Math.PI * 2) p.faceAttack(a);
-          this.spawnSlash(p.pos.x, p.pos.z, a, range, arc, 0xe8eef7);
-          this.arcHit(range, arc, dmg, { aim: a, knock: 3 });
-          this.vfx.sparks(p.pos.x + Math.sin(a) * range * 0.6, 0.9, p.pos.z + Math.cos(a) * range * 0.6, 0xdfe8ff, 4);
+          this.spawnSlash(p.pos.x, p.pos.z, a, range * 1.05, arc, 0xbcd4ff);
+          this.spawnSlash(p.pos.x, p.pos.z, a, range * 0.7, arc, 0xffffff);
+          this.vfx.ring(p.pos.x, p.pos.z, range * 0.5, range * 1.25, 0xdfe8ff, 0.3, 0.3);
+          const hits = this.arcHit(range, arc, dmg, { aim: a, knock: 3, hitColor: 0xdfe8ff });
+          this.vfx.spawnParticles(p.pos.x + Math.sin(a) * range * 0.6, 1.0, p.pos.z + Math.cos(a) * range * 0.6, 12,
+            { color: 0xdfe8ff, speed: 11, life: 0.35, size: 0.8, up: 2.4, grav: -14 });
+          this.vfx.flash(p.pos.x + Math.sin(a) * range * 0.5, 1.2, p.pos.z + Math.cos(a) * range * 0.5, 0xbcd4ff, 1.1);
+          this.game.shake(0.1 + Math.min(0.2, hits * 0.03));
         };
         swing(1);
         if (lvl >= 3) setTimeout(() => this.game.state === 'playing' && swing(-1), 190);
@@ -968,9 +997,12 @@ export class WeaponSystem {
 
   _strike(e, dmg, lvl) {
     this.spawnBolt(e.x, e.z);
-    this.vfx.ring(e.x, e.z, 0.3, 2.2, 0x9fd0ff, 0.3);
-    this.vfx.sparks(e.x, 0.8, e.z, 0x9fd0ff, 9);
-    this.hitEnemy(e, dmg, { freeze: lvl >= 5 ? 0.5 : 0 });
+    this.vfx.ring(e.x, e.z, 0.3, 3.4, 0x9fd0ff, 0.34);
+    this.vfx.ring(e.x, e.z, 0.2, 1.8, 0xffffff, 0.22);
+    this.vfx.spawnParticles(e.x, 0.9, e.z, 16, { color: 0xcfe8ff, speed: 13, life: 0.4, size: 0.8, up: 4, grav: -18 });
+    this.vfx.flash(e.x, 1.4, e.z, 0x9fd0ff, 1.6);
+    this.game.shake(0.12);
+    this.hitEnemy(e, dmg, { freeze: lvl >= 5 ? 0.5 : 0, hitColor: 0x9fd0ff });
     SFX.throwKnife();
   }
 
@@ -1266,6 +1298,13 @@ export class WeaponSystem {
         continue;
       }
 
+      // Trail. Cheap because it is rate-limited per projectile per frame.
+      if (p.radius > 0 && Math.random() < dt * 34) {
+        this.vfx.spawnParticles(p.x, p.y, p.z, 1, {
+          color: p.trailColor || 0xffe9b0, speed: 0.5, life: 0.22, size: 0.42, up: 0.2, grav: -1.5,
+        });
+      }
+
       const mesh = this.projMeshes[p.style];
       if (!mesh) continue;
       const idx = counts[p.style];
@@ -1321,8 +1360,9 @@ export class WeaponSystem {
       s.life -= dt;
       if (s.life <= 0) { s.mesh.visible = false; continue; }
       const t = s.life / s.maxLife;
-      s.mesh.material.opacity = t * 0.85;
-      s.mesh.scale.multiplyScalar(1 + dt * 1.6);
+      // Snap out fast, then linger — reads as a strike rather than a fade.
+      s.mesh.material.opacity = Math.min(1, t * 1.9) * 0.95;
+      s.mesh.scale.multiplyScalar(1 + dt * 2.6);
     }
   }
 
