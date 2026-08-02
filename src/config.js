@@ -30,6 +30,31 @@ export const CFG = {
     turnLerp: 14,
   },
 
+  // ---- dodge + stamina -----------------------------------------------------
+  // Space rolls the hunter in whatever direction he is already moving. The
+  // half-second of invulnerability is the whole point of the move — long
+  // enough to pass through a charging Gloomwolf, short enough that it cannot
+  // be chained into permanent safety.
+  DODGE: {
+    duration: 0.24,     // seconds of travel
+    speedMul: 3.4,      // multiplier on the hunter's current move speed
+    iframes: 0.5,
+    cooldown: 0.3,      // recovery after landing, so a double tap is one roll
+    cost: 33,           // a third of the starting pool: three rolls from full
+  },
+  STAMINA: {
+    base: 100,
+    perRank: 30,        // Sure-Footed rank -> one more stored roll every rank
+    regen: 19,          // per second; a single roll comes back in ~1.7s
+    regenPerRank: 0.16, // fractional bonus per rank
+    maxRank: 5,
+    // Sure-Footed is deliberately scarce: about 5% of early card screens offer
+    // it, rising to ~20% once owned because the upgrade bucket is small. This
+    // is the chance it survives the
+    // cull when a level-up screen is being rolled — see upgrades.js.
+    cardChance: 0.85,
+  },
+
   // ---- camera --------------------------------------------------------------
   CAMERA: {
     // 3/4 top-down. Offset is in world units relative to the player.

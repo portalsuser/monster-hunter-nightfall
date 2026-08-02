@@ -246,6 +246,11 @@ export class Player {
     this._attackHold = 0;
     this._atk = null;     // active swing, see attack()
 
+    // Dodge roll, see dodge().
+    this.dodgeTime = 0;   // seconds of travel remaining
+    this.dodgeCd = 0;     // recovery lockout
+    this._dodgeDir = new THREE.Vector3(0, 0, 1);
+
     // Stat block. Weapons read these every time they fire.
     this.stats = {
       maxHp: CFG.PLAYER.maxHp,
@@ -265,7 +270,18 @@ export class Player {
       crit: 0.03,
       critMul: 2.0,
       revives: 0,
+      // Dodge fuel. Both derived values are recomputed by _applyPassives, but
+      // they need sane defaults here because the hunter can roll before he has
+      // ever picked up Sure-Footed.
+      stamina: CFG.STAMINA.base,
+      staminaMax: CFG.STAMINA.base,
+      staminaRegen: CFG.STAMINA.regen,
     };
+  }
+
+  /** True when a roll is affordable and off cooldown — drives the HUD glow. */
+  get canDodge() {
+    return this.alive && this.dodgeCd <= 0 && this.stats.stamina >= CFG.DODGE.cost;
   }
 
   get hp() { return this.stats.hp; }
@@ -333,6 +349,45 @@ export class Player {
   punch() { this.attack('punch'); }
 
   /**
+   * Rolls in the direction of travel, spending stamina for half a second of
+   * invulnerability. Returns true if the roll actually started, so the caller
+   * knows whether to play the sound and spray the dust.
+   *
+   * The i-frames are granted up front rather than partway through the
+   * animation: the player pressed the button because something was already
+   * about to hit them, and a windup would make the move feel like a lie.
+   */
+  dodge(move) {
+    if (!this.alive || this.dodgeTime > 0 || this.dodgeCd > 0) return false;
+    const s = this.stats;
+    if (s.stamina < CFG.DODGE.cost) return false;
+
+    // Direction of travel, falling back to wherever he already faces so a
+    // standing dodge still goes somewhere sensible instead of nowhere.
+    let dx = move ? move.x : 0;
+    let dz = move ? move.z : 0;
+    if (dx === 0 && dz === 0) {
+      dx = Math.sin(this.facing);
+      dz = Math.cos(this.facing);
+    }
+    const len = Math.hypot(dx, dz) || 1;
+
+    s.stamina -= CFG.DODGE.cost;
+    this._dodgeDir.set(dx / len, 0, dz / len);
+    this.dodgeTime = CFG.DODGE.duration;
+    this.dodgeCd = CFG.DODGE.duration + CFG.DODGE.cooldown;
+    // Never shorten i-frames the hunter already had from taking a hit.
+    this.invuln = Math.max(this.invuln, CFG.DODGE.iframes);
+    this.facing = Math.atan2(dx, dz);
+
+    // The roll owns the body: drop any swing pose rather than blending two
+    // animations that were never designed to overlap.
+    this._atk = null;
+    this._attackHold = 0;
+    return true;
+  }
+
+  /**
    * Swing curve, normalised to [-0.5 .. 1 .. 0]:
    * wind back, snap through, ease home. Everything in the pose reads off this
    * single value so the limbs, hips and lunge stay in sync.
@@ -363,20 +418,42 @@ export class Player {
     if (this.hurtFlash > 0) this.hurtFlash = Math.max(0, this.hurtFlash - dt * 3);
     if (s.regen > 0 && this.alive) this.heal(s.regen * dt);
 
+    // Stamina trickles back whatever else is happening; the roll's own
+    // cooldown is what stops you from spamming it, not a regen delay.
+    if (this.alive && s.stamina < s.staminaMax) {
+      s.stamina = Math.min(s.staminaMax, s.stamina + s.staminaRegen * dt);
+    }
+    if (this.dodgeCd > 0) this.dodgeCd = Math.max(0, this.dodgeCd - dt);
+
+    const dodging = this.dodgeTime > 0;
     const moving = move.x !== 0 || move.z !== 0;
-    const target = s.speed;
-    this.vel.x = damp(this.vel.x, move.x * target, 16, dt);
-    this.vel.z = damp(this.vel.z, move.z * target, 16, dt);
+
+    if (dodging) {
+      // Input is ignored mid-roll — committing to the direction is what makes
+      // the move a real decision rather than a free speed boost.
+      this.dodgeTime = Math.max(0, this.dodgeTime - dt);
+      const k = this.dodgeTime / CFG.DODGE.duration;   // 1 -> 0
+      const sp = s.speed * CFG.DODGE.speedMul * (0.35 + k * 0.65);   // launch hard, land soft
+      this.vel.x = this._dodgeDir.x * sp;
+      this.vel.z = this._dodgeDir.z * sp;
+    } else {
+      const target = s.speed;
+      this.vel.x = damp(this.vel.x, move.x * target, 16, dt);
+      this.vel.z = damp(this.vel.z, move.z * target, 16, dt);
+    }
     this.pos.x += this.vel.x * dt;
     this.pos.z += this.vel.z * dt;
 
     if (moving) this.aim.set(move.x, 0, move.z).normalize();
 
-    // An in-progress swing wins over the movement heading.
+    // A roll locks the heading; otherwise an in-progress swing wins over the
+    // movement direction.
     if (this._attackHold > 0) this._attackHold -= dt;
-    const want = this._attackHold > 0
-      ? this._attackYaw
-      : (moving ? Math.atan2(move.x, move.z) : null);
+    const want = dodging
+      ? null
+      : this._attackHold > 0
+        ? this._attackYaw
+        : (moving ? Math.atan2(move.x, move.z) : null);
 
     if (want !== null) {
       // Shortest-arc yaw interpolation.
@@ -471,6 +548,41 @@ export class Player {
     }
     this.parts.cloak.rotation.x = -0.06 - speedFrac * 0.34 + Math.sin(this._walkPhase * 0.5) * 0.05 * speedFrac;
     this.parts.cloak.rotation.z = Math.sin(this._walkPhase * 0.7) * 0.07 * speedFrac;
+
+    // --- roll pose ---------------------------------------------------------
+    // Applied last so it overrides the walk cycle and the swing reset above.
+    // A diving shoulder-roll rather than a somersault: from a 3/4 camera a
+    // full rotation just reads as the model glitching, whereas a hard pitch
+    // forward, a low crouch and a flared coat read unmistakably as a dive.
+    if (dodging) {
+      const p = 1 - this.dodgeTime / CFG.DODGE.duration;   // 0 -> 1
+      const bell = Math.sin(p * Math.PI);                  // 0 -> 1 -> 0
+
+      this.parts.body.rotation.x = bell * 1.15;
+      this.parts.body.rotation.y = 0;
+      this.parts.body.rotation.z = 0;
+      this.parts.body.position.y = -bell * 0.42;
+
+      // Chin tucked into the dive, then up again on the landing.
+      this.parts.head.rotation.x = -bell * 0.55;
+      this.parts.head.rotation.y = 0;
+
+      // Legs tuck under, arms sweep back — a shape, not a T-pose in motion.
+      this.parts.legs[0].rotation.x = -1.25 * bell;
+      this.parts.legs[1].rotation.x = 0.85 * bell;
+      this.parts.arms[0].rotation.x = 1.15 * bell;
+      this.parts.arms[1].rotation.x = 1.15 * bell;
+      this.parts.arms[0].rotation.z = -0.3 * bell;
+      this.parts.arms[1].rotation.z = 0.3 * bell;
+
+      // Coat streams out behind him.
+      this.parts.cloak.rotation.x = -0.06 - bell * 1.05;
+      this.parts.cloak.rotation.z = 0;
+    } else if (this._rolledLastFrame) {
+      // Land cleanly — otherwise the tucked head keeps its pitch forever.
+      this.parts.head.rotation.x = 0;
+    }
+    this._rolledLastFrame = dodging;
 
     // Lantern flicker.
     const fl = 0.85 + Math.sin(performance.now() * 0.011) * 0.1 + Math.random() * 0.06;

@@ -328,6 +328,15 @@ export const PASSIVES = {
   bloodhound: { name: 'Bloodhound', icon: '🩸', color: '#ff4a6a', maxLevel: 20, desc: 'Monster parts are worth more.', step: '+7% monster parts' },
   mending: { name: 'Slow Mending', icon: '✚', color: '#8affb0', maxLevel: 20, desc: 'Regenerate health over time.', step: '+0.35 HP/sec' },
   secondwind: { name: 'Second Wind', icon: '🕯️', color: '#ffe9a8', maxLevel: 20, desc: 'Survive a fatal blow, restoring half your health.', step: '+1 revive every 4 ranks' },
+  // The odd one out: five ranks instead of twenty, and `rare` makes the card
+  // pool cull it most of the time. Each rank is worth roughly a whole extra
+  // dodge, so it would dominate every screen it appeared on.
+  stamina: {
+    name: 'Sure-Footed', icon: '🌀', color: '#7fe8ff',
+    maxLevel: CFG.STAMINA.maxRank, rare: true,
+    desc: 'Deepens your wind, so you can roll more often before running dry.',
+    step: `+${CFG.STAMINA.perRank} stamina and faster recovery`,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -550,6 +559,14 @@ export class WeaponSystem {
     s.greed = 1 + L('bloodhound') * 0.07;
     s.regen = L('mending') * 0.35;
     s.revives = Math.floor(L('secondwind') / 4);
+
+    // Stamina. Taking a rank hands you the new capacity immediately, the same
+    // way Vigor heals you for the health it just granted.
+    const prevStam = s.staminaMax;
+    s.staminaMax = CFG.STAMINA.base + L('stamina') * CFG.STAMINA.perRank;
+    s.staminaRegen = CFG.STAMINA.regen * (1 + L('stamina') * CFG.STAMINA.regenPerRank);
+    if (s.staminaMax > prevStam) s.stamina += s.staminaMax - prevStam;
+    s.stamina = Math.max(0, Math.min(s.staminaMax, s.stamina));
 
     if (s.maxHp > prevMax) this.player.heal(s.maxHp - prevMax);
   }

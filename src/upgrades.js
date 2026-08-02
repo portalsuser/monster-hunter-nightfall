@@ -1,4 +1,5 @@
 import { WEAPONS, PASSIVES } from './weapons.js';
+import { CFG } from './config.js';
 import { shuffle } from './utils.js';
 
 export const MAX_WEAPONS = 6;
@@ -46,6 +47,17 @@ export function rollUpgrades(weaponSystem, player, count = 3) {
   shuffle(newWeapons);
   shuffle(upgradePassive);
   shuffle(newPassives);
+
+  // Passives flagged `rare` (currently just Sure-Footed) are culled from the
+  // pool most of the time. They cap at 5 ranks rather than 20 and each rank is
+  // worth about a whole extra dodge, so seeing one should feel like a find.
+  const cullRare = (list) => {
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (PASSIVES[list[i].key]?.rare && Math.random() >= CFG.STAMINA.cardChance) list.splice(i, 1);
+    }
+  };
+  cullRare(upgradePassive);
+  cullRare(newPassives);
 
   // Weighted draw across the four buckets. Late in a run, "new" buckets are
   // starved so the player can actually cap what they are building.

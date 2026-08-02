@@ -19,7 +19,9 @@ export class Input {
         e.preventDefault();
       }
       if (e.code === 'Escape' || e.code === 'KeyP') this.pausePressed = true;
-      this._consumers.forEach((fn) => fn(e.code));
+      // Key repeat is never wanted by a consumer: holding Space would chain
+      // dodges, and holding a number key would fire a level-up card twice.
+      if (!e.repeat) this._consumers.forEach((fn) => fn(e.code));
     };
     this._onKeyUp = (e) => this.keys.delete(e.code);
     this._onBlur = () => this.keys.clear();

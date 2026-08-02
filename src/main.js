@@ -108,6 +108,10 @@ class Game {
         if (this.state === 'playing' || this.state === 'paused') this.togglePause();
         return;
       }
+      if (code === 'Space' && this.state === 'playing') {
+        this._tryDodge();
+        return;
+      }
       if (code === 'Enter' && this.state === 'menu') this.start();
       if (code === 'Enter' && this.state === 'over') this.restart();
       if (code === 'KeyM') {
@@ -115,6 +119,24 @@ class Game {
         const btn = document.getElementById('mute-btn');
         if (btn) btn.textContent = m ? '🔇' : '🔊';
       }
+    });
+  }
+
+  /**
+   * Space bar. `input.move` is at most one frame stale, which is exactly the
+   * direction the player believed they were heading when they pressed it.
+   */
+  _tryDodge() {
+    const p = this.player;
+    const from = { x: p.pos.x, z: p.pos.z };
+    if (!p.dodge(this.input.move)) return;
+
+    SFX.slash();
+    // Dust kicked up at the launch point, and a low ring that reads as the
+    // push-off. Both sit at the origin so the roll visibly comes *from* there.
+    this.vfx.ring(from.x, from.z, 0.4, 2.6, 0xcfe6ff, 0.34, 0.08);
+    this.vfx.spawnParticles(from.x, 0.25, from.z, 14, {
+      color: 0xb9c8d8, speed: 3.4, spread: 1, life: 0.42, size: 0.7, up: 1.1, grav: -5,
     });
   }
 
@@ -184,8 +206,11 @@ class Game {
     this.player.parts_collected = 0;
     this.player.invuln = 1.2;
     this.player.hurtFlash = 0;
+    this.player.dodgeTime = 0;
+    this.player.dodgeCd = 0;
     this.weapons._applyPassives();
     this.player.stats.hp = this.player.stats.maxHp;
+    this.player.stats.stamina = this.player.stats.staminaMax;
 
     // You always begin with your fists and nothing else.
     this.weapons.addOrLevel('fists');

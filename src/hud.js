@@ -12,6 +12,8 @@ export class HUD {
     this.el = {
       hp: $('hp-fill'),
       hpText: $('hp-text'),
+      stam: $('stam-fill'),
+      stamTrack: $('stam-track'),
       xp: $('xp-fill'),
       level: $('level-num'),
       timer: $('timer'),
@@ -75,6 +77,25 @@ export class HUD {
     this.el.hp.style.width = `${hpFrac * 100}%`;
     this.el.hpText.textContent = `${Math.ceil(p.hp)} / ${Math.round(p.maxHp)}`;
     this.el.lowhp.classList.toggle('active', hpFrac < 0.3 && p.alive);
+
+    // Stamina. The tick spacing only changes when Sure-Footed ranks up, so it
+    // is written through a cached compare rather than every frame.
+    if (this.el.stam) {
+      const st = p.stats;
+      const max = Math.max(1, st.staminaMax);
+      this.el.stam.style.width = `${Math.max(0, Math.min(1, st.stamina / max)) * 100}%`;
+      const ready = p.canDodge;
+      if (ready !== this._stamReady) {
+        this._stamReady = ready;
+        this.el.stamTrack.classList.toggle('ready', ready);
+        this.el.stamTrack.classList.toggle('spent', !ready);
+      }
+      const seg = (CFG.DODGE.cost / max) * 100;
+      if (seg !== this._stamSeg) {
+        this._stamSeg = seg;
+        this.el.stamTrack.style.setProperty('--seg', `${seg}%`);
+      }
+    }
 
     const xpFrac = Math.min(1, p.xp / p.xpNeeded);
     this.el.xp.style.width = `${xpFrac * 100}%`;
