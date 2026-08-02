@@ -20,6 +20,7 @@ class Game {
     this.score = 0;
     this.bossesKilled = 0;
     this.victory = false;
+    this.abandoned = false;
     this.pendingLevelUps = 0;
     this.save = { bestScore: 0, bestTime: 0, totalRuns: 0, totalKills: 0, bestLevel: 0, bossesFelled: 0 };
 
@@ -184,6 +185,7 @@ class Game {
     this.score = 0;
     this.bossesKilled = 0;
     this.victory = false;
+    this.abandoned = false;
     this.pendingLevelUps = 0;
     this._shake = 0;
     this._hitstop = 0;
@@ -218,6 +220,23 @@ class Game {
     const [ox, oy, oz] = CFG.CAMERA.offset;
     this.camera.position.set(ox, oy, oz);
     this.world.update(0.016, 0, 0, 0);
+  }
+
+  /**
+   * "Abandon Hunt" from the pause menu.
+   *
+   * This used to call restart(), which silently began a fresh run — and from
+   * the player's side that is indistinguishable from Resume, because you land
+   * straight back in the forest. Abandoning should *end* the hunt: bank the
+   * score, show the results and the leaderboard, exactly as if you had died.
+   */
+  abandon() {
+    if (this.state !== 'paused' && this.state !== 'playing') return;
+    this.hud.showPause(false);
+    this.abandoned = true;
+    this.player.alive = false;
+    this.player.stats.hp = 0;
+    this._gameOver();
   }
 
   togglePause() {
@@ -367,7 +386,7 @@ class Game {
     this.shake(1.2);
 
     // A run that banked all 20 enhancements is a finished hunt, not a failure.
-    this.victory = this.player.levelUps >= CFG.MAX_LEVEL_UPS;
+    this.victory = !this.abandoned && this.player.levelUps >= CFG.MAX_LEVEL_UPS;
     this.score = this._computeScore();
     this.save.totalRuns++;
     this.save.totalKills += this.enemies.totalKills;
@@ -436,6 +455,22 @@ class Game {
 
     const move = this.input.update();
     this.player.update(dt, move);
+
+    // Dust laid down along the roll. Without a trail the hunter reads as
+    // having jump-cut to a new spot rather than travelled there.
+    const rolling = this.player.dodgeTime > 0;
+    if (rolling) {
+      this.vfx.spawnParticles(this.player.pos.x, 0.3, this.player.pos.z, 2, {
+        color: 0xa8bccd, speed: 1.2, spread: 0.7, life: 0.34, size: 0.62, up: 0.5, grav: -3,
+      });
+    } else if (this._wasRolling) {
+      // Landing: a scuff ring and a kick of dirt where he comes back up.
+      this.vfx.ring(this.player.pos.x, this.player.pos.z, 0.3, 2.2, 0xbcd4e6, 0.28, 0.08);
+      this.vfx.spawnParticles(this.player.pos.x, 0.2, this.player.pos.z, 9, {
+        color: 0x9fb0bf, speed: 2.6, spread: 1, life: 0.38, size: 0.66, up: 1.4, grav: -6,
+      });
+    }
+    this._wasRolling = rolling;
     this.world.update(dt, this.player.pos.x, this.player.pos.z, this.elapsed);
     this.player.lanternWorld(this._lanternPos);
     this.world.setLanternAt(this._lanternPos.x, this._lanternPos.y + 0.3, this._lanternPos.z);

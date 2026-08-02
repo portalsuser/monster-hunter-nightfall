@@ -47,7 +47,9 @@ export class HUD {
   _bind() {
     this.el.startBtn.addEventListener('click', () => this.game.start());
     $('resume-btn').addEventListener('click', () => this.game.togglePause());
-    $('restart-btn').addEventListener('click', () => this.game.restart());
+    // "Abandon Hunt" ends the run and shows the results; it does not quietly
+    // start a new one, which read as Resume.
+    $('restart-btn').addEventListener('click', () => this.game.abandon());
     $('again-btn').addEventListener('click', () => this.game.restart());
     $('mute-btn').addEventListener('click', (e) => {
       const m = this.game.toggleMute();
@@ -237,7 +239,9 @@ export class HUD {
 
   showResults(game, best) {
     const p = game.player;
-    this.el.overTitle.textContent = game.victory ? 'The Hunt Endures' : 'You Fell';
+    this.el.overTitle.textContent = game.abandoned
+      ? 'Hunt Abandoned'
+      : game.victory ? 'The Hunt Endures' : 'You Fell';
     const rows = [
       ['Survived', formatTime(game.elapsed)],
       ['Monsters slain', game.enemies.totalKills],

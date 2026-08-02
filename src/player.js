@@ -558,29 +558,35 @@ export class Player {
       const p = 1 - this.dodgeTime / CFG.DODGE.duration;   // 0 -> 1
       const bell = Math.sin(p * Math.PI);                  // 0 -> 1 -> 0
 
-      this.parts.body.rotation.x = bell * 1.15;
+      this.parts.body.rotation.x = bell * 1.5;
       this.parts.body.rotation.y = 0;
       this.parts.body.rotation.z = 0;
-      this.parts.body.position.y = -bell * 0.42;
+      this.parts.body.position.y = -bell * 0.62;
 
       // Chin tucked into the dive, then up again on the landing.
-      this.parts.head.rotation.x = -bell * 0.55;
+      this.parts.head.rotation.x = -bell * 0.7;
       this.parts.head.rotation.y = 0;
 
       // Legs tuck under, arms sweep back — a shape, not a T-pose in motion.
-      this.parts.legs[0].rotation.x = -1.25 * bell;
-      this.parts.legs[1].rotation.x = 0.85 * bell;
-      this.parts.arms[0].rotation.x = 1.15 * bell;
-      this.parts.arms[1].rotation.x = 1.15 * bell;
-      this.parts.arms[0].rotation.z = -0.3 * bell;
-      this.parts.arms[1].rotation.z = 0.3 * bell;
+      this.parts.legs[0].rotation.x = -1.6 * bell;
+      this.parts.legs[1].rotation.x = 1.15 * bell;
+      this.parts.arms[0].rotation.x = 1.45 * bell;
+      this.parts.arms[1].rotation.x = 1.45 * bell;
+      this.parts.arms[0].rotation.z = -0.4 * bell;
+      this.parts.arms[1].rotation.z = 0.4 * bell;
 
       // Coat streams out behind him.
-      this.parts.cloak.rotation.x = -0.06 - bell * 1.05;
+      this.parts.cloak.rotation.x = -0.06 - bell * 1.35;
       this.parts.cloak.rotation.z = 0;
+
+      // Skim low across the ground. Visual only — `pos` is untouched, so the
+      // hitbox never leaves the floor.
+      this.mesh.position.y = -bell * 0.16;
     } else if (this._rolledLastFrame) {
-      // Land cleanly — otherwise the tucked head keeps its pitch forever.
+      // Land cleanly — otherwise the tucked head and the skim keep their
+      // values forever.
       this.parts.head.rotation.x = 0;
+      this.mesh.position.y = 0;
     }
     this._rolledLastFrame = dodging;
 

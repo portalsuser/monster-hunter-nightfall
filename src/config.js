@@ -35,10 +35,15 @@ export const CFG = {
   // half-second of invulnerability is the whole point of the move — long
   // enough to pass through a charging Gloomwolf, short enough that it cannot
   // be chained into permanent safety.
+  // Distance matters more than it looks. At the first pass (0.24s at 3.4x) a
+  // roll covered 2.8 units against the 1.0 you would have run anyway — a net
+  // gain of under half the hunter's own height, which is invisible. These
+  // numbers put ~6.7 units under him, clearing about 1.3 body lengths beyond
+  // a normal stride, which is the point at which it reads as a dodge.
   DODGE: {
-    duration: 0.24,     // seconds of travel
-    speedMul: 3.4,      // multiplier on the hunter's current move speed
-    iframes: 0.5,
+    duration: 0.34,     // seconds of travel
+    speedMul: 5.6,      // multiplier on the hunter's current move speed
+    iframes: 0.5,       // outlasts the roll, so the landing is still safe
     cooldown: 0.3,      // recovery after landing, so a double tap is one roll
     cost: 33,           // a third of the starting pool: three rolls from full
   },
