@@ -9,8 +9,20 @@ export const CFG = {
   // that is 240 picks to max a build out — aspirational, not expected.
   MAX_RANK: 20,
   MAX_LEVEL_UPS: 240,
-  BOSS_INTERVAL: 180,         // seconds between boss spawns (3 minutes)
+  BOSS_INTERVAL: 180,         // seconds of hunting before a level's boss wakes
   FIRST_BOSS_AT: 180,
+
+  // ---- levels --------------------------------------------------------------
+  // The run is divided into levels. A level is three minutes of hunting, then
+  // its boss wakes; killing the boss ends the level. Its death throws out a
+  // shockwave that vaporises every monster still standing — vaporised, not
+  // slain, so they pay out nothing. After a breather the next level begins and
+  // the horde returns, harder. Levels never stop; the four bosses cycle.
+  LEVEL: {
+    sweepSpeed: 52,     // world units/sec the clearing shockwave travels
+    sweepMax: 70,       // stop once the front is past the despawn radius
+    interlude: 3.2,     // breather between a cleared field and the next level
+  },
 
   // Visual scale. Gameplay radii are scaled alongside these in the modules that
   // own them, so hitboxes keep matching what you can see.

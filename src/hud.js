@@ -16,6 +16,10 @@ export class HUD {
       stamTrack: $('stam-track'),
       xp: $('xp-fill'),
       level: $('level-num'),
+      stage: $('stage-num'),
+      banner: $('banner'),
+      bannerTitle: $('banner-title'),
+      bannerSub: $('banner-sub'),
       timer: $('timer'),
       kills: $('kills'),
       parts: $('parts'),
@@ -102,6 +106,7 @@ export class HUD {
     const xpFrac = Math.min(1, p.xp / p.xpNeeded);
     this.el.xp.style.width = `${xpFrac * 100}%`;
     this.el.level.textContent = p.level;
+    if (this.el.stage) this.el.stage.textContent = game.level;
     this.el.picks.textContent = `${p.levelUps}`;
 
     this.el.timer.textContent = formatTime(game.elapsed);
@@ -227,6 +232,23 @@ export class HUD {
 
   // ---- misc --------------------------------------------------------------
 
+  /**
+   * Big centred announcement for level transitions. Distinct from toast(),
+   * which is a running feed in the corner — a level ending deserves the middle
+   * of the screen, and only one of these is ever up at a time.
+   */
+  showBanner(title, sub = '') {
+    if (!this.el.banner) return;
+    this.el.bannerTitle.textContent = title;
+    this.el.bannerSub.textContent = sub;
+    this.el.banner.classList.remove('show');
+    // Force a reflow so re-triggering the animation actually restarts it.
+    void this.el.banner.offsetWidth;
+    this.el.banner.classList.add('show');
+    clearTimeout(this._bannerT);
+    this._bannerT = setTimeout(() => this.el.banner.classList.remove('show'), 2600);
+  }
+
   toast(text, color = '#ffe9b0') {
     const d = document.createElement('div');
     d.className = 'toast';
@@ -246,7 +268,8 @@ export class HUD {
       ['Survived', formatTime(game.elapsed)],
       ['Monsters slain', game.enemies.totalKills],
       ['Monster parts', p.parts_collected],
-      ['Level reached', p.level],
+      ['Levels cleared', Math.max(0, game.level - 1)],
+      ['Hunter level', p.level],
       ['Enhancements', `${p.levelUps}/${CFG.MAX_LEVEL_UPS}`],
       ['Bosses felled', game.bossesKilled],
       ['Score', game.score],

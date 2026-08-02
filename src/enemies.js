@@ -1071,6 +1071,12 @@ export class EnemyManager {
     this.bossIndex = 0;
     this.bossCycle = 0;
     this.totalKills = 0;
+    // Held high while a level is being cleared and through the breather that
+    // follows, so the field stays empty until the next level actually starts.
+    this.spawnPaused = false;
+    // Raised alongside spawnPaused while a level is clearing: the field is
+    // being wiped, not farmed, so nothing that dies in that window pays out.
+    this.rewardsOff = false;
 
     this._dummy = new THREE.Object3D();
     this._buildInstances();
@@ -1276,7 +1282,15 @@ export class EnemyManager {
   kill(e) {
     if (!e.alive) return;
     e.alive = false;
-    this.totalKills++;
+
+    // A level clear wipes the field. Anything that dies between the boss going
+    // down and the next level starting counts for nothing — whether the sweep
+    // took it or a weapon that was still swinging did. Without this a straggler
+    // killed during the sweep would quietly pay out parts and a kill, which is
+    // exactly what clearing the level is supposed to rule out. The boss is
+    // always counted: it is what ended the level.
+    const pays = !this.rewardsOff || e.isBoss;
+    if (pays) this.totalKills++;
 
     if (e.isBoss) {
       SFX.bossDie();
@@ -1312,7 +1326,7 @@ export class EnemyManager {
       if (this.game.explosionHitsPlayer) this.game.explosionHitsPlayer(e.x, e.z, radius, dmg);
     }
 
-    if (this.game.onEnemyKilled) this.game.onEnemyKilled(e);
+    if (pays && this.game.onEnemyKilled) this.game.onEnemyKilled(e);
   }
 
   // ---- enemy projectiles --------------------------------------------------
@@ -1372,17 +1386,22 @@ export class EnemyManager {
   update(dt, player, elapsed) {
     // 1. Timers -------------------------------------------------------------
     const d = difficulty(elapsed);
-    this.spawnTimer -= dt;
-    if (this.spawnTimer <= 0) {
-      const interval = Math.max(CFG.SPAWN.minInterval, CFG.SPAWN.baseInterval / d.countMul);
-      this.spawnTimer = interval / CFG.DENSITY;
-      this.spawnWave(player, elapsed);
-    }
+    if (!this.spawnPaused) {
+      this.spawnTimer -= dt;
+      if (this.spawnTimer <= 0) {
+        const interval = Math.max(CFG.SPAWN.minInterval, CFG.SPAWN.baseInterval / d.countMul);
+        this.spawnTimer = interval / CFG.DENSITY;
+        this.spawnWave(player, elapsed);
+      }
 
-    this.bossTimer -= dt;
-    if (this.bossTimer <= 0) {
-      this.bossTimer = CFG.BOSS_INTERVAL;
-      this.spawnBoss(player, elapsed);
+      this.bossTimer -= dt;
+      if (this.bossTimer <= 0) {
+        // Infinity, not BOSS_INTERVAL: a level owns exactly one boss, and the
+        // clock for the next one is restarted by the game when the next level
+        // begins. Rearming here would stack a second boss on a slow fight.
+        this.bossTimer = Infinity;
+        this.spawnBoss(player, elapsed);
+      }
     }
 
     // Cache the hunter's heading for the straggler-recycling path below.
@@ -1732,6 +1751,48 @@ export class EnemyManager {
     return best;
   }
 
+  /**
+   * Removes every trash mob inside `radius` of a point, awarding nothing.
+   *
+   * This is the level-clear sweep, and it deliberately does NOT go through
+   * kill(): the monsters are vaporised by the boss's death throes, not slain
+   * by the hunter. Routing them through kill() would pay out monster parts,
+   * inflate the kill tally and set off every shrieker on the field at once.
+   *
+   * Returns how many it took, so the caller can report the clear.
+   */
+  vaporizeTrash(cx, cz, radius) {
+    const r2 = radius * radius;
+    let n = 0;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      const dx = e.x - cx, dz = e.z - cz;
+      if (dx * dx + dz * dz > r2) continue;
+      // The per-frame loop in update() recycles anything flagged dead.
+      e.alive = false;
+      // Keep the puff small: the front can cross a hundred monsters in a
+      // second and the particle pool has other work to do.
+      this.vfx.spawnParticles(e.x, 0.8 * e.scale, e.z, 4, {
+        color: 0xffd9a0, speed: 5.5, life: 0.42, size: 0.75, up: 2.6, grav: -7,
+      });
+      n++;
+    }
+    // Anything already in the air dies with them.
+    for (const p of this.projectiles) {
+      if (!p.alive) continue;
+      const dx = p.x - cx, dz = p.z - cz;
+      if (dx * dx + dz * dz <= r2) p.alive = false;
+    }
+    return n;
+  }
+
+  /** Trash mobs still standing — the level-clear watches this reach zero. */
+  get trashAlive() {
+    let n = 0;
+    for (const e of this.enemies) if (e.alive) n++;
+    return n;
+  }
+
   reset() {
     for (const key of this.typeKeys) {
       const bucket = this.render[key];
@@ -1751,6 +1812,8 @@ export class EnemyManager {
     this.bossTimer = CFG.FIRST_BOSS_AT;
     this.bossIndex = 0;
     this.totalKills = 0;
+    this.spawnPaused = false;
+    this.rewardsOff = false;
     this.hash.clear();
   }
 }

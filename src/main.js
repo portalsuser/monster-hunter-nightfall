@@ -22,6 +22,11 @@ class Game {
     this.victory = false;
     this.abandoned = false;
     this.pendingLevelUps = 0;
+    this.level = 1;              // game level, not the hunter's XP level
+    this.levelPhase = null;      // null | 'clearing' | 'interlude'
+    this.levelTimer = 0;
+    this.levelSweepR = 0;
+    this.levelSwept = 0;
     this.save = { bestScore: 0, bestTime: 0, totalRuns: 0, totalKills: 0, bestLevel: 0, bossesFelled: 0 };
 
     this._initRenderer();
@@ -187,6 +192,11 @@ class Game {
     this.victory = false;
     this.abandoned = false;
     this.pendingLevelUps = 0;
+    this.level = 1;
+    this.levelPhase = null;
+    this.levelTimer = 0;
+    this.levelSweepR = 0;
+    this.levelSwept = 0;
     this._shake = 0;
     this._hitstop = 0;
     this._hitstopCd = 0;
@@ -322,6 +332,85 @@ class Game {
     // ...plus the guaranteed bonus level up.
     this.grantLevelUp(boss.def.name);
     this.toast(`${boss.def.name} slain — bonus enhancement!`, '#ffd23c');
+    // ...and the boss's death ends the level.
+    this._beginLevelClear(boss);
+  }
+
+  // ---- levels ------------------------------------------------------------
+
+  /**
+   * The boss is down, so the level is over. Its death throws out a shockwave
+   * that sweeps the field clean.
+   *
+   * The sweep is a growing radius rather than one instant wipe: it reads as a
+   * wave rolling outward, and it spreads the particle cost over a second
+   * instead of vaporising two hundred monsters in a single frame. The hunter
+   * is invulnerable throughout — dying to a straggler during the victory lap
+   * would be miserable, and he has no way to fight back once the field is
+   * clearing.
+   */
+  _beginLevelClear(boss) {
+    if (this.levelPhase) return;          // one clear per level, whatever else lands
+    this.levelPhase = 'clearing';
+    this.levelSweepR = 0;
+    this.levelSwept = 0;
+    this.enemies.spawnPaused = true;
+    this.enemies.rewardsOff = true;
+    this.player.invuln = Math.max(this.player.invuln, 99);
+    this.hud.showBanner(`Level ${this.level} Cleared`, `${boss.def.name} has fallen`);
+    this.vfx.ring(boss.x, boss.z, 1, 26, 0xffd23c, 1.2);
+    SFX.levelUp();
+  }
+
+  /** Drives the sweep and the breather. Called from _step while a level ends. */
+  _updateLevelPhase(dt) {
+    if (this.levelPhase === 'clearing') {
+      const prev = this.levelSweepR;
+      this.levelSweepR += CFG.LEVEL.sweepSpeed * dt;
+      // Only the newly-covered band needs checking, but the cost of scanning
+      // the whole list is trivial next to the clarity, and enemies drift.
+      this.levelSwept += this.enemies.vaporizeTrash(
+        this.player.pos.x, this.player.pos.z, this.levelSweepR
+      );
+      // A visible front, drawn as a thin expanding ring each frame.
+      if (Math.floor(prev / 6) !== Math.floor(this.levelSweepR / 6)) {
+        this.vfx.ring(this.player.pos.x, this.player.pos.z,
+          this.levelSweepR * 0.92, this.levelSweepR * 1.08, 0xffe9b0, 0.35, 0.12);
+      }
+      if (this.levelSweepR >= CFG.LEVEL.sweepMax && this.enemies.trashAlive === 0) {
+        this.levelPhase = 'interlude';
+        this.levelTimer = CFG.LEVEL.interlude;
+        if (this.levelSwept > 0) {
+          this.toast(`${this.levelSwept} monsters scattered`, '#ffe9b0');
+        }
+      }
+      return;
+    }
+
+    // Interlude: the field is empty and the hunter gets a moment to breathe
+    // and hoover up whatever the fight left on the ground.
+    this.levelTimer -= dt;
+    if (this.levelTimer <= 0) this._beginLevel(this.level + 1);
+  }
+
+  /** Starts a level: the horde returns and its boss clock begins. */
+  _beginLevel(n) {
+    this.level = n;
+    this.levelPhase = null;
+    this.levelSweepR = 0;
+    // levelSwept is deliberately NOT cleared here — _beginLevelClear zeroes it
+    // when the next sweep starts, so the tally survives long enough to be read
+    // and reported after the level ends.
+    this.enemies.spawnPaused = false;
+    this.enemies.rewardsOff = false;
+    this.enemies.spawnTimer = 0.6;
+    this.enemies.bossTimer = CFG.BOSS_INTERVAL;
+    this.player.invuln = Math.min(this.player.invuln, 2.0);   // drop the sweep's shield
+    if (n > 1) {
+      this.hud.showBanner(`Level ${n}`, 'The forest stirs again');
+      SFX.bossSpawn();
+      setMusicIntensity(0.4);
+    }
   }
 
   collectParts(amount) {
@@ -483,6 +572,10 @@ class Game {
       this._openLevelUp();
       return;
     }
+
+    // A level ending owns the frame: the sweep runs, spawning stays off and
+    // the hunter is untouchable until the next level begins.
+    if (this.levelPhase) this._updateLevelPhase(dt);
 
     this.enemies.update(dt, this.player, this.elapsed);
     this.weapons.update(dt, this.elapsed);
