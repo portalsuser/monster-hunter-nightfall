@@ -413,12 +413,34 @@ console.log('▶ phase 7 — frame cost with a saturated horde');
   }
   game.player.stats.maxHp = 1e9;
   game.player.stats.hp = 1e9;
-  // Fast-forward the difficulty clock so waves arrive at late-run density.
+  // Peak density is late in a level, on a late roster — difficulty runs off
+  // level time and level number now, so winding `elapsed` forward does nothing.
   game.elapsed = 900;
-  // Longer warm-up: the standing population takes a while to reach steady
-  // state now that monsters are larger (separation spreads them out) and
-  // hit-stop slightly slows the clock.
-  for (let i = 0; i < 60 * 45; i++) { frame(KITE()); steps++; }
+  game.level = 3;
+
+  // Saturate the field directly instead of waiting for a ramp to do it.
+  // Density is now capped per level by design and a rank-20 build out-kills it
+  // outright, so the old "wind the clock to minute 15" trick measured an empty
+  // map. Topping the population up every frame measures what this phase is
+  // actually for: the cost of a full field with every weapon firing.
+  const TARGET = Math.floor(CFG.SPAWN.maxAlive * 0.75);
+  const roster = (await import('../src/enemies.js')).rosterFor(game.level);
+  const saturate = () => {
+    game.levelTime = 170;
+    game.enemies.bossTimer = Infinity;      // no boss: a clear would empty the map
+    let guard = 0;
+    while (game.enemies.enemies.length < TARGET && guard++ < 40) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 12 + Math.random() * 16;
+      game.enemies.spawnOne(
+        roster[(guard + game.enemies.enemies.length) % roster.length],
+        game.player.pos.x + Math.cos(a) * r,
+        game.player.pos.z + Math.sin(a) * r,
+        game.elapsed
+      );
+    }
+  };
+  for (let i = 0; i < 60 * 20; i++) { saturate(); frame(KITE()); steps++; }
 
   // Sample the population across the whole timed window rather than at one
   // instant: kills arrive in bursts, so a single reading swings by ±10 and
@@ -426,7 +448,7 @@ console.log('▶ phase 7 — frame cost with a saturated horde');
   let popSum = 0;
   const t0 = process.hrtime.bigint();
   const N = 600;
-  for (let i = 0; i < N; i++) { frame(KITE()); steps++; popSum += game.enemies.enemies.length; }
+  for (let i = 0; i < N; i++) { saturate(); frame(KITE()); steps++; popSum += game.enemies.enemies.length; }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6 / N;
   const alive = Math.round(popSum / N);
   console.log(`   ${alive} enemies alive (mean) · ${ms.toFixed(2)} ms/frame of game logic (excludes GPU)`);
@@ -438,7 +460,9 @@ console.log('▶ phase 7 — frame cost with a saturated horde');
   // pattern happens to cull, and it dropped sharply once the rankPick fix let
   // Knives, Cross, Holy Water, Sigil and Fangs fire past rank 5 — a fully
   // ranked build now actually mows the horde down, which is the point.
-  if (alive < 25) fail(`late-game horde only reached ${alive} enemies; the frame-cost measurement is not meaningful`);
+  if (alive < TARGET * 0.8) {
+    fail(`the field held only ${alive} enemies against a target of ${TARGET}; the frame-cost measurement is not meaningful`);
+  }
 }
 
 // --- Phase 8: level-up integrity (regression) -------------------------------
@@ -765,7 +789,8 @@ console.log('▶ phase 11 — levels, boss clears and the sweep');
   // t=0 is a trickle, and a level clear is only interesting against the horde
   // that is genuinely on the field three minutes in.
   game.elapsed = CFG.FIRST_BOSS_AT;
-  if (!until(() => E.trashAlive > 25, 90)) fail('the horde never built up on level 1');
+  game.levelTime = CFG.FIRST_BOSS_AT - 20;
+  if (!until(() => E.trashAlive > 25, 120)) fail('the horde never built up on level 1');
   E.bossTimer = 0;
   if (!until(() => E.bosses.length > 0, 10)) fail('forcing the boss clock did not spawn a boss');
 
@@ -824,7 +849,9 @@ console.log('▶ phase 11 — levels, boss clears and the sweep');
   // Level advanced, and the horde comes back.
   if (game.level !== 2) fail(`level is ${game.level} after the first clear, expected 2`);
   if (E.spawnPaused) fail('spawning is still paused after the next level began');
-  if (!until(() => E.trashAlive > 5, 30)) fail('monsters did not respawn on level 2');
+  // Level 2 deliberately opens calm and builds, so this takes a ramp's worth
+  // of time rather than arriving pre-saturated the way it used to.
+  if (!until(() => E.trashAlive > 5, 90)) fail('monsters did not respawn on level 2');
   console.log(`   level 2 began and the horde returned (${E.trashAlive} alive)`);
 
   // The next boss is on a fresh clock, not the old absolute one.
@@ -834,7 +861,8 @@ console.log('▶ phase 11 — levels, boss clears and the sweep');
 
   // And it repeats: drive two more levels the same way.
   for (let want = 3; want <= 4; want++) {
-    until(() => E.trashAlive > 15, 40);
+    game.levelTime = Math.max(game.levelTime, 120);
+    until(() => E.trashAlive > 15, 60);
     E.bossTimer = 0;
     if (!until(() => E.bosses.length > 0, 12)) { fail(`level ${want - 1} never spawned its boss`); break; }
     E.kill(E.bosses[0]);
@@ -844,7 +872,8 @@ console.log('▶ phase 11 — levels, boss clears and the sweep');
   console.log(`   levels chain: reached level ${game.level} through ${game.bossesKilled} bosses`);
 
   // The hunter cannot be killed during his own victory lap.
-  until(() => E.trashAlive > 10, 40);
+  game.levelTime = Math.max(game.levelTime, 120);
+  until(() => E.trashAlive > 10, 60);
   E.bossTimer = 0;
   if (!until(() => E.bosses.length > 0, 12)) fail('no boss to test invulnerability against');
   if (E.bosses.length) E.kill(E.bosses[0]);
@@ -945,6 +974,135 @@ console.log('▶ phase 12 — Vigor, the Spirit Hound, and the horde mix');
   const wantXp = Math.round(def.xp * CFG.ENEMY.partsMul);
   if (g0.xp !== wantXp) fail(`a fresh Grotling drops ${g0.xp} parts, expected ${wantXp}`);
   console.log(`   Grotling: ${g0.maxHp} HP (${CFG.ENEMY.hpMul}x), ${g0.xp} parts (${CFG.ENEMY.partsMul.toFixed(2)}x)`);
+  game.restart();
+}
+
+// --- Phase 13: per-level rosters and ramps ------------------------------------
+console.log('▶ phase 13 — level rosters, ramps and chest supply');
+{
+  const { ROSTERS, rosterFor, ENEMY_TYPES } = await import('../src/enemies.js');
+  const { difficulty } = await import('../src/config.js');
+
+  // Every level opens on the same curve. Driving difficulty off total elapsed
+  // time meant level 2 began at whatever minute 3.5 looked like — a wall of
+  // monsters the moment the banner cleared.
+  for (const lvl of [1, 2, 3, 5]) {
+    const open = difficulty(0, lvl).countMul;
+    const base = difficulty(0, 1).countMul;
+    if (Math.abs(open - base) > 1e-9) {
+      fail(`level ${lvl} opens at countMul ${open.toFixed(2)} against level 1's ${base.toFixed(2)}`);
+    }
+    const peak = difficulty(180, lvl).countMul;
+    if (peak <= open) fail(`level ${lvl} does not build: ${open.toFixed(2)} -> ${peak.toFixed(2)}`);
+  }
+  console.log(`   every level ramps ${difficulty(0, 1).countMul.toFixed(2)}x -> `
+    + `${difficulty(180, 1).countMul.toFixed(2)}x, identical shape`);
+
+  // Later levels are harder through their monsters, not their numbers.
+  if (difficulty(60, 2).hpMul <= difficulty(60, 1).hpMul) fail('level 2 monsters are no tougher than level 1');
+  if (difficulty(60, 2).xpMul <= difficulty(60, 1).xpMul) fail('level 2 monsters are worth no more than level 1');
+
+  // Rosters must not overlap: level 2 is entirely new creatures.
+  for (let i = 0; i < ROSTERS.length; i++) {
+    for (let j = i + 1; j < ROSTERS.length; j++) {
+      const shared = ROSTERS[i].filter((k) => ROSTERS[j].includes(k));
+      if (shared.length) fail(`levels ${i + 1} and ${j + 1} share monsters: ${shared.join(', ')}`);
+    }
+  }
+  // ...and every roster must cover the whole level, unlocking on the same beat.
+  for (let i = 0; i < ROSTERS.length; i++) {
+    const mins = ROSTERS[i].map((k) => {
+      if (!ENEMY_TYPES[k]) fail(`roster ${i + 1} names unknown monster '${k}'`);
+      return ENEMY_TYPES[k] ? ENEMY_TYPES[k].minute : -1;
+    });
+    if (Math.min(...mins) !== 0) fail(`roster ${i + 1} has nothing available at the start of the level`);
+    if (Math.max(...mins) > CFG.BOSS_INTERVAL / 60) {
+      fail(`roster ${i + 1} unlocks a monster at ${Math.max(...mins)}min, after its boss arrives`);
+    }
+  }
+  console.log(`   ${ROSTERS.length} rosters, no shared monsters: `
+    + ROSTERS.map((r, i) => `L${i + 1} ${r.length}`).join(', '));
+
+  // Now play it: level 2 must actually field its own monsters, and only those.
+  game.restart();
+  game.state = 'playing';
+  const E = game.enemies, P = game.player;
+  const imm = () => { P.stats.maxHp = 1e9; P.stats.hp = 1e9; };
+  const KITE2 = (i) => ({ x: Math.cos(i / 70), z: Math.sin(i / 70) });
+
+  const seenOn = (secs) => {
+    const seen = new Set();
+    for (let i = 0; i < 60 * secs; i++) {
+      imm(); frame(KITE2(i));
+      for (const e of E.enemies) if (e.alive) seen.add(e.key);
+    }
+    return seen;
+  };
+
+  game.levelTime = 150;
+  const l1seen = seenOn(40);
+  const l1bad = [...l1seen].filter((k) => !rosterFor(1).includes(k));
+  if (l1bad.length) fail(`level 1 fielded off-roster monsters: ${l1bad.join(', ')}`);
+
+  // Density at the moment level 2 opens must match level 1's opening, not the
+  // saturated field that was standing when its boss died.
+  E.bossTimer = 0;
+  for (let i = 0; i < 900 && !E.bosses.length; i++) { imm(); frame(KITE2(i)); }
+  if (E.bosses.length) E.kill(E.bosses[0]);
+  for (let i = 0; i < 2400 && game.levelPhase; i++) { imm(); frame(KITE2(i)); }
+  if (game.level !== 2) fail(`expected level 2, got ${game.level}`);
+  if (game.levelTime > 1) fail(`level 2 began with levelTime already at ${game.levelTime.toFixed(1)}s`);
+
+  // Sample the first 20 seconds of level 2 against the first 20 of level 1.
+  let l2Early = 0;
+  for (let i = 0; i < 60 * 20; i++) { imm(); frame(KITE2(i)); l2Early += E.trashAlive; }
+  l2Early /= 60 * 20;
+
+  const l2seen = seenOn(100);
+  const l2bad = [...l2seen].filter((k) => !rosterFor(2).includes(k));
+  if (l2bad.length) fail(`level 2 fielded level-1 monsters: ${l2bad.join(', ')}`);
+  if (l2seen.size < 2) fail(`level 2 only ever fielded ${l2seen.size} monster type(s)`);
+  console.log(`   level 2 fielded ${[...l2seen].map((k) => ENEMY_TYPES[k].name).join(', ')}`);
+
+  game.restart();
+  game.state = 'playing';
+  let l1Early = 0;
+  for (let i = 0; i < 60 * 20; i++) { imm(); frame(KITE2(i)); l1Early += E.trashAlive; }
+  l1Early /= 60 * 20;
+  // Level 2's opening should sit in the same neighbourhood as level 1's, not
+  // the 2x+ wall that absolute-elapsed difficulty produced.
+  if (l2Early > l1Early * 2.2 + 6) {
+    fail(`level 2 opens with ${l2Early.toFixed(0)} monsters against level 1's ${l1Early.toFixed(0)}`);
+  }
+  console.log(`   opening 20s: level 1 ~${l1Early.toFixed(0)} on the field, level 2 ~${l2Early.toFixed(0)}`);
+
+  // Chests must keep coming on level 2. Slots used to clog with chests the
+  // player circled past, and every later spawn was silently dropped.
+  game.restart();
+  game.state = 'playing';
+  const K = game.pickups;
+  let spawned = 0;
+  const origChest = K.spawnChest.bind(K);
+  K.spawnChest = (p) => { const r = origChest(p); if (r) spawned++; return r; };
+  for (let i = 0; i < 60 * 20; i++) { imm(); frame(KITE2(i)); }
+  spawned = 0;
+  for (let i = 0; i < 60 * 150; i++) { imm(); frame(KITE2(i)); }
+  E.bossTimer = 0;
+  for (let i = 0; i < 900 && !E.bosses.length; i++) { imm(); frame(KITE2(i)); }
+  if (E.bosses.length) E.kill(E.bosses[0]);
+  for (let i = 0; i < 2400 && game.levelPhase; i++) { imm(); frame(KITE2(i)); }
+  const onLevel1 = spawned;
+  spawned = 0;
+  for (let i = 0; i < 60 * 150; i++) { imm(); frame(KITE2(i)); }
+  const onLevel2 = spawned;
+  K.spawnChest = origChest;
+  // The bug was a supply that dried up, so compare level 2 against level 1
+  // rather than against an absolute number the loot table might drift away from.
+  if (onLevel2 < onLevel1 * 0.6) {
+    fail(`chests dried up: ${onLevel1} on level 1's last 150s, only ${onLevel2} on level 2`);
+  }
+  if (onLevel2 === 0) fail('no chests at all on level 2');
+  console.log(`   chests per 150s: ${onLevel1} on level 1, ${onLevel2} on level 2`);
   game.restart();
 }
 

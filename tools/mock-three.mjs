@@ -115,6 +115,7 @@ class BufferGeometry {
   rotateY() { return this; }
   rotateZ() { return this; }
   translate() { return this; }
+  scale() { return this; }
   computeBoundingSphere() { return this; }
   toNonIndexed() { return this; }
   dispose() {}
