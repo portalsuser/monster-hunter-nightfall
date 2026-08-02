@@ -58,6 +58,13 @@
 
   <!-- on-screen stick (touch only) -->
   <div id="stick"><div id="stick-knob"></div></div>
+
+  <!-- dodge, touch only. Space has no equivalent on a phone, so the roll
+       needs a real button or the mechanic simply does not exist there. -->
+  <button id="dodge-btn" type="button" aria-label="Dodge roll">
+    <span id="dodge-btn-ring"></span>
+    <span id="dodge-btn-label">roll</span>
+  </button>
 </div>
 
 <!-- =====================================================================
@@ -73,7 +80,7 @@
 
     <div class="how">
       <div><b>WASD</b> / <b>arrows</b> / <b>stick</b> — move</div>
-      <div><b>Space</b> — dodge roll (half a second of invulnerability)</div>
+      <div><b>Space</b> / <b>roll</b> button — dodge (half a second of invulnerability)</div>
       <div>Your weapons swing on their own. Stay alive.</div>
       <div><b>1 2 3</b> — pick an enhancement · <b>Esc</b> — pause</div>
     </div>

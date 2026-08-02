@@ -379,6 +379,61 @@ html, body {
   pointer-events: none;
 }
 
+/* Only ever shown once a real touch has happened — a mouse user should never
+   see a thumb button, and `hover: none` alone misfires on hybrid laptops. */
+#dodge-btn {
+  position: fixed;
+  display: none;
+  right: 26px;
+  bottom: 34px;
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  z-index: 30;
+  color: #f3ead2;
+  font: 600 13px/1 'Cinzel', Georgia, serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: radial-gradient(circle at 50% 38%, rgba(120, 96, 52, 0.5), rgba(24, 20, 16, 0.66));
+  border: 2px solid rgba(230, 198, 120, 0.5);
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.55), inset 0 0 14px rgba(255, 214, 130, 0.14);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
+}
+
+body.has-touch #dodge-btn {
+  display: grid;
+  place-items: center;
+}
+
+#dodge-btn-ring {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 226, 150, 0.75);
+  opacity: 0;
+  transform: scale(0.6);
+  pointer-events: none;
+}
+
+#dodge-btn.fired #dodge-btn-ring {
+  animation: dodge-pop 0.34s ease-out;
+}
+
+/* Stamina too low, or still on cooldown — say so instead of doing nothing. */
+#dodge-btn.spent {
+  color: rgba(243, 234, 210, 0.42);
+  border-color: rgba(230, 198, 120, 0.2);
+  box-shadow: none;
+}
+
+@keyframes dodge-pop {
+  from { opacity: 0.95; transform: scale(0.62); }
+  to { opacity: 0; transform: scale(1.25); }
+}
+
 #stick-knob {
   position: absolute;
   left: 50%;
