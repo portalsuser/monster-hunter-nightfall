@@ -1,0 +1,31 @@
+# Test shim — tools/smoke.mjs regenerates this on every run to resolve the
+# bare 'three' specifier to tools/mock-three.mjs.
+node_modules/
+
+# NOTE: vendor/three.module.js is deliberately NOT ignored.
+#
+# It is the game's only runtime dependency (~1.2 MB). Committing it means the
+# repo is a complete, self-contained game that Portals can serve as-is. If it
+# were ignored, index.html would silently fall back to the unpkg CDN — which
+# works locally but leaves the published game depending on a third-party host
+# at runtime, and breaks outright if the Portals sandbox blocks outbound
+# requests.
+#
+# Run `npm run vendor` once, then commit the file.
+
+# Publishable bundle produced by tools/bundle.sh
+dist/
+*.zip
+
+# Portals injects and replaces this when it processes the project.
+_portals/sdk.js
+
+# Scratch folder for files staged for deletion (the Cowork device bridge that
+# wrote this repo cannot rm, so throwaway files get moved here instead).
+_to_delete/
+
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

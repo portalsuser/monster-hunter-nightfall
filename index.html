@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#05070c">
+<meta name="description" content="Monster Hunter: Nightfall — a horde-survivor hunt through a dark forest. Built with three.js for Portals.">
+<title>Monster Hunter: Nightfall</title>
+<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗡️</text></svg>">
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<!-- =====================================================================
+     HUD
+     ================================================================== -->
+<div id="ui">
+
+  <!-- top bar -->
+  <div id="topbar">
+    <div id="xp-track"><div id="xp-fill"></div></div>
+    <div id="topline">
+      <div class="chip"><span class="lbl">LV</span><span id="level-num">1</span></div>
+      <div class="chip"><span class="lbl">⏱</span><span id="timer">00:00</span></div>
+      <div class="chip"><span class="lbl">☠</span><span id="kills">0</span></div>
+      <div class="chip"><span class="lbl">🦴</span><span id="parts">0</span></div>
+      <div class="chip"><span class="lbl">★</span><span id="picks">0/20</span></div>
+      <div class="spacer"></div>
+      <button id="mute-btn" class="icon-btn" title="Mute (M)">🔊</button>
+      <button id="pause-btn" class="icon-btn" title="Pause (Esc)">⏸</button>
+    </div>
+  </div>
+
+  <!-- boss bar -->
+  <div id="boss-wrap" class="hidden">
+    <div id="boss-name">Boss</div>
+    <div id="boss-track"><div id="boss-fill"></div></div>
+  </div>
+
+  <!-- health -->
+  <div id="hp-wrap">
+    <div id="hp-track"><div id="hp-fill"></div></div>
+    <div id="hp-text">120 / 120</div>
+  </div>
+
+  <!-- owned weapons / passives -->
+  <div id="slots"></div>
+
+  <div id="toasts"></div>
+  <div id="damage-flash"></div>
+  <div id="lowhp"></div>
+
+  <!-- on-screen stick (touch only) -->
+  <div id="stick"><div id="stick-knob"></div></div>
+</div>
+
+<!-- =====================================================================
+     Start screen
+     ================================================================== -->
+<div id="start" class="overlay">
+  <div class="panel">
+    <div class="crest">🗡️</div>
+    <h1>Monster Hunter<span>Nightfall</span></h1>
+    <p class="tag">The forest is thick, the moon is thin, and something is already moving.</p>
+
+    <button id="start-btn" class="primary">Begin the Hunt</button>
+
+    <div class="how">
+      <div><b>WASD</b> / <b>arrows</b> / <b>stick</b> — move</div>
+      <div>Your weapons swing on their own. Stay alive.</div>
+      <div><b>1 2 3</b> — pick an enhancement · <b>Esc</b> — pause</div>
+    </div>
+
+    <ul class="bullets">
+      <li>Beat monsters down with your <b>fists</b> and collect their parts.</li>
+      <li>Every level up grants a weapon or enhancement — <b>20 in total</b>.</li>
+      <li>A <b>boss</b> stalks in every 3 minutes. It drops a hoard and a bonus pick.</li>
+      <li>Smash <b>chests</b> for health, parts, and — rarely — a free level.</li>
+    </ul>
+
+    <div id="portals-note" class="note">Connecting to Portals…</div>
+  </div>
+</div>
+
+<!-- =====================================================================
+     Level up
+     ================================================================== -->
+<div id="levelup" class="overlay hidden">
+  <div class="levelup-inner">
+    <h2>Level Up</h2>
+    <p id="levelup-sub">Choose an enhancement</p>
+    <div id="cards"></div>
+    <div class="hint">Press <b>1</b>, <b>2</b> or <b>3</b></div>
+  </div>
+</div>
+
+<!-- =====================================================================
+     Pause
+     ================================================================== -->
+<div id="pause" class="overlay hidden">
+  <div class="panel narrow">
+    <h2>Paused</h2>
+    <ul id="pause-list" class="loadout"></ul>
+    <button id="resume-btn" class="primary">Resume</button>
+    <button id="restart-btn" class="ghost">Abandon Hunt</button>
+  </div>
+</div>
+
+<!-- =====================================================================
+     Game over
+     ================================================================== -->
+<div id="gameover" class="overlay hidden">
+  <div class="panel">
+    <h2 id="over-title">You Fell</h2>
+    <div id="over-stats" class="stats"></div>
+    <div id="leaderboard" class="board"></div>
+    <button id="again-btn" class="primary">Hunt Again</button>
+  </div>
+</div>
+
+<div id="fatal" class="overlay hidden">
+  <div class="panel narrow">
+    <h2>Something broke</h2>
+    <p style="white-space:pre-wrap"></p>
+  </div>
+</div>
+
+<!-- =====================================================================
+     Portals SDK.
+     The platform injects and replaces this file when it processes or
+     publishes the project — it is intentionally absent from the repo, and a
+     404 here is expected when running locally. Do not vendor or edit it.
+     ================================================================== -->
+<script src="./_portals/sdk.js" onerror="window.__noPortals=true"></script>
+
+<!-- =====================================================================
+     Module bootstrap.
+     three.js is loaded from ./vendor/three.module.js when it is present
+     (run tools/vendor-three.sh once) and falls back to a CDN otherwise, so
+     the game runs either way.
+     ================================================================== -->
+<script>
+(async function boot() {
+  const VERSION = '0.169.0';
+  const CDN = `https://unpkg.com/three@${VERSION}/build/three.module.js`;
+  const LOCAL = './vendor/three.module.js';
+
+  let threeUrl = CDN;
+  try {
+    const res = await fetch(LOCAL, { method: 'HEAD' });
+    if (res.ok) threeUrl = LOCAL;
+  } catch (e) {
+    /* file:// or missing vendor copy — fall through to the CDN */
+  }
+
+  const map = document.createElement('script');
+  map.type = 'importmap';
+  map.textContent = JSON.stringify({ imports: { three: threeUrl } });
+  document.head.appendChild(map);
+
+  const entry = document.createElement('script');
+  entry.type = 'module';
+  entry.src = './src/main.js';
+  entry.onerror = () => {
+    const el = document.getElementById('fatal');
+    el.classList.remove('hidden');
+    el.querySelector('p').textContent =
+      'Could not load the game modules. If you opened this file directly from disk, '
+      + 'serve the folder over HTTP instead (for example: npx serve .) — browsers block '
+      + 'ES modules on file:// URLs.';
+  };
+  document.body.appendChild(entry);
+})();
+</script>
+
+</body>
+</html>

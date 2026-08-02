@@ -1,0 +1,16 @@
+{
+  "name": "monster-hunter-nightfall",
+  "version": "1.0.0",
+  "description": "A horde-survivor hunt through a dark forest. Built with three.js for Portals.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "npx --yes serve . -l 5173",
+    "dev": "npx --yes serve . -l 5173",
+    "vendor": "bash tools/vendor-three.sh",
+    "test": "node tools/smoke.mjs",
+    "bundle": "bash tools/bundle.sh"
+  },
+  "keywords": ["threejs", "webgl", "game", "survivors", "portals"],
+  "license": "MIT"
+}
