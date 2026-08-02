@@ -95,6 +95,11 @@ export class HUD {
         this._stamReady = ready;
         this.el.stamTrack.classList.toggle('ready', ready);
         this.el.stamTrack.classList.toggle('spent', !ready);
+        // The touch button mirrors the bar, so a thumb can tell at a glance
+        // whether a tap will actually roll.
+        if (this.game.input && this.game.input.setDodgeReady) {
+          this.game.input.setDodgeReady(ready);
+        }
       }
       const seg = (CFG.DODGE.cost / max) * 100;
       if (seg !== this._stamSeg) {

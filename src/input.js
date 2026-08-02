@@ -30,11 +30,58 @@ export class Input {
     window.addEventListener('keyup', this._onKeyUp);
     window.addEventListener('blur', this._onBlur);
 
+    this._padDodge = false;
+
     this._bindTouch(dom);
+    this._bindDodgeButton();
   }
 
   onKey(fn) {
     this._consumers.push(fn);
+  }
+
+  /** Fire the same path the Space bar takes, from any source. */
+  _emit(code) {
+    this._consumers.forEach((fn) => fn(code));
+  }
+
+  /**
+   * A phone has no Space bar, so without this the dodge — and the whole
+   * stamina system hanging off it — is simply absent on touch. The button
+   * only appears once a touch has actually happened, so mouse players never
+   * see it, and it swallows its own events so the thumbstick below does not
+   * also latch onto the press.
+   */
+  _bindDodgeButton() {
+    const btn = document.getElementById('dodge-btn');
+    this.dodgeBtn = btn;
+    if (!btn) return;
+
+    const press = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this._emit('Space');
+      btn.classList.remove('fired');
+      // Force a reflow so the ring animation restarts on rapid taps.
+      void btn.offsetWidth;
+      btn.classList.add('fired');
+    };
+    btn.addEventListener('touchstart', press, { passive: false });
+    // Click as well, so a trackpad or assistive device can reach it.
+    btn.addEventListener('click', (e) => { e.preventDefault(); this._emit('Space'); });
+    btn.addEventListener('touchend', (e) => e.stopPropagation(), { passive: true });
+  }
+
+  /** Reveal touch-only chrome the first time a finger lands. */
+  _markTouch() {
+    if (this._touchSeen) return;
+    this._touchSeen = true;
+    document.body.classList.add('has-touch');
+  }
+
+  /** Grey the button out when a tap would do nothing. Called by the HUD. */
+  setDodgeReady(ready) {
+    if (this.dodgeBtn) this.dodgeBtn.classList.toggle('spent', !ready);
   }
 
   _bindTouch(dom) {
@@ -43,6 +90,9 @@ export class Input {
     const R = 52;
 
     const start = (e) => {
+      this._markTouch();
+      // A press that began on the roll button is not a movement input.
+      if (e.target && e.target.closest && e.target.closest('#dodge-btn')) return;
       const t = e.changedTouches[0];
       this.touch.active = true;
       this.touch.id = t.identifier;
@@ -114,6 +164,11 @@ export class Input {
       const az = p.axes[1] || 0;
       if (Math.abs(ax) > 0.18) x += ax;
       if (Math.abs(az) > 0.18) z += az;
+      // Face button (A / cross) dodges, edge-triggered so holding it does not
+      // chain rolls the way a held Space bar is already prevented from doing.
+      const a = !!(p.buttons && p.buttons[0] && p.buttons[0].pressed);
+      if (a && !this._padDodge) this._emit('Space');
+      this._padDodge = a;
       break;
     }
 
