@@ -221,6 +221,58 @@ html, body {
   text-shadow: 0 1px 4px #000;
 }
 
+/* ----------------------------------------------------------------- banner */
+/* Level transitions get the middle of the screen. Pointer events stay off so
+   it can never eat a click during the interlude. */
+
+#banner {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  width: max-content;
+  max-width: 90vw;
+}
+
+#banner.show { animation: banner-in 2.6s ease-out forwards; }
+
+#banner-title {
+  font-size: clamp(28px, 6vw, 54px);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ffe9b0;
+  text-shadow: 0 0 26px rgba(255, 200, 90, 0.55), 0 3px 12px #000;
+}
+
+#banner-sub {
+  margin-top: 6px;
+  font-size: clamp(12px, 2vw, 16px);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-shadow: 0 2px 8px #000;
+}
+
+@keyframes banner-in {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.86); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+  20% { transform: translate(-50%, -50%) scale(1); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -58%) scale(1); }
+}
+
+/* The level chip is the run's spine, so it reads a touch louder than the
+   hunter's own level sitting next to it. */
+.chip.lvl-chip {
+  border-color: rgba(255, 210, 60, 0.45);
+  background: rgba(70, 52, 10, 0.55);
+}
+
+.chip.lvl-chip .lbl { color: #ffd23c; letter-spacing: 0.09em; }
+
 /* ------------------------------------------------------------------ slots */
 
 #slots {

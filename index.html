@@ -22,7 +22,8 @@
   <div id="topbar">
     <div id="xp-track"><div id="xp-fill"></div></div>
     <div id="topline">
-      <div class="chip"><span class="lbl">LV</span><span id="level-num">1</span></div>
+      <div class="chip lvl-chip" title="Level — clear the boss to advance"><span class="lbl">LEVEL</span><span id="stage-num">1</span></div>
+      <div class="chip" title="Hunter level"><span class="lbl">LV</span><span id="level-num">1</span></div>
       <div class="chip"><span class="lbl">⏱</span><span id="timer">00:00</span></div>
       <div class="chip"><span class="lbl">☠</span><span id="kills">0</span></div>
       <div class="chip"><span class="lbl">🦴</span><span id="parts">0</span></div>
@@ -48,6 +49,8 @@
 
   <!-- owned weapons / passives -->
   <div id="slots"></div>
+
+  <div id="banner"><div id="banner-title"></div><div id="banner-sub"></div></div>
 
   <div id="toasts"></div>
   <div id="damage-flash"></div>
@@ -78,6 +81,7 @@
     <ul class="bullets">
       <li>Beat monsters down with your <b>fists</b> and collect their parts.</li>
       <li>Every level up grants a weapon or enhancement. Each ranks to <b>20</b>.</li>
+      <li>Each <b>level</b> ends when its boss falls — and its death scatters every monster left standing.</li>
       <li>A <b>boss</b> stalks in every 3 minutes. It drops a hoard and a bonus pick.</li>
       <li>Smash <b>chests</b> for health, parts, and — rarely — a free level.</li>
     </ul>

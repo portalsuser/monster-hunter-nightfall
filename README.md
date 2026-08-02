@@ -31,8 +31,16 @@ M                              mute
   rather than away from it. Each roll spends a third of the stamina bar under
   your health, which refills in about 1.7 seconds per roll. Direction is locked
   once the roll starts, so it is a commitment, not a free sprint.
+- **Levels.** The run is divided into levels. A level is three minutes of
+  hunting, then its boss wakes; killing the boss ends the level. Its death
+  throws out a shockwave that vaporises every monster still standing — and
+  because they were vaporised rather than slain, they pay out **nothing**: no
+  parts, no kill credit. The hunter is invulnerable while the field clears.
+  After a short breather the next level begins, the horde returns harder, and
+  a fresh boss clock starts. Levels never stop; the four bosses cycle.
 - **A boss every 3 minutes.** It drops a large hoard of parts, a fistful of
-  health, and a guaranteed **bonus enhancement**.
+  health, and a guaranteed **bonus enhancement**. Exactly one boss belongs to
+  each level — the clock does not rearm while one is still standing.
 - **Chests** appear as you run. Break them by walking into them or hitting them.
   Inside: monster parts (~62%), health (~30%), or — rarely (~3.5%) — a free
   level up.
