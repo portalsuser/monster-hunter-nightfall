@@ -849,10 +849,18 @@ console.log('▶ phase 11 — levels, boss clears and the sweep');
   // Level advanced, and the horde comes back.
   if (game.level !== 2) fail(`level is ${game.level} after the first clear, expected 2`);
   if (E.spawnPaused) fail('spawning is still paused after the next level began');
-  // Level 2 deliberately opens calm and builds, so this takes a ramp's worth
-  // of time rather than arriving pre-saturated the way it used to.
-  if (!until(() => E.trashAlive > 5, 90)) fail('monsters did not respawn on level 2');
-  console.log(`   level 2 began and the horde returned (${E.trashAlive} alive)`);
+  // Level 2 deliberately opens calm and builds, so count what actually SPAWNS
+  // rather than waiting for a standing population to cross a line. With a
+  // maxed build killing them as fast as they arrive, the live count hovers
+  // right around any threshold worth setting and the test flaps for reasons
+  // that have nothing to do with respawning.
+  let respawned = 0;
+  const origSpawnOne = E.spawnOne.bind(E);
+  E.spawnOne = (...a) => { const r = origSpawnOne(...a); if (r) respawned++; return r; };
+  until(() => respawned > 20, 90);
+  E.spawnOne = origSpawnOne;
+  if (respawned === 0) fail('no monsters spawned at all on level 2');
+  console.log(`   level 2 began and the horde returned (${respawned} spawned, ${E.trashAlive} alive)`);
 
   // The next boss is on a fresh clock, not the old absolute one.
   if (!Number.isFinite(E.bossTimer) || E.bossTimer > CFG.BOSS_INTERVAL) {

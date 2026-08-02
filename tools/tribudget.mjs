@@ -35,8 +35,10 @@ globalThis.document = globalThis.document || {
 };
 
 const { trisOf } = await import('./count-three.mjs');
+const THREE = await import('three');
 const { ENEMY_TYPES } = await import('../src/enemies.js');
 const { CFG } = await import('../src/config.js');
+const { Player } = await import('../src/player.js');
 
 // --- per-monster cost -------------------------------------------------------
 
@@ -85,15 +87,35 @@ const world = {
 };
 const worldTotal = Object.values(world).reduce((a, b) => a + b, 0);
 
+// --- the hunter -------------------------------------------------------------
+// One character, so he can afford detail the horde cannot. Worth measuring
+// separately because his draw-call count matters as much as his triangles:
+// he is a tree of separate meshes, not an instanced batch.
+const scene = new THREE.Scene();
+const hunter = new Player(scene);
+let heroTris = 0, heroMeshes = 0, heroCasters = 0;
+hunter.mesh.traverse((o) => {
+  if (!o.geometry) return;
+  heroMeshes++;
+  if (o.castShadow) heroCasters++;
+  heroTris += trisOf(o.geometry);
+});
+console.log('\nTHE HUNTER');
+console.log('─'.repeat(58));
+console.log(`${pad('triangles', 40)}${num(heroTris)}`);
+console.log(`${pad('meshes (draw calls)', 40)}${heroMeshes}`);
+console.log(`${pad('shadow casters', 40)}${heroCasters}`);
+
 console.log('\nWHOLE FRAME (upper bounds)');
 console.log('─'.repeat(58));
 console.log(`${pad('horde @ maxAlive ' + alive + ', mean type', 40)}${num(hordeMean)}`);
 console.log(`${pad('horde @ maxAlive, worst type', 40)}${num(hordeWorst)}`);
 console.log(`${pad('static world (trees/rocks/ferns/ground)', 40)}${num(worldTotal)}`);
+console.log(`${pad('the hunter', 40)}${num(heroTris)}`);
 
 const SHADOW = 2; // the directional light re-draws casters once
-const frameMean = (hordeMean + worldTotal) * SHADOW;
-const frameWorst = (hordeWorst + worldTotal) * SHADOW;
+const frameMean = (hordeMean + worldTotal + heroTris) * SHADOW;
+const frameWorst = (hordeWorst + worldTotal + heroTris) * SHADOW;
 console.log(`${pad('frame incl. shadow pass — mixed horde', 40)}${num(frameMean)}`);
 console.log(`${pad('frame incl. shadow pass — worst case', 40)}${num(frameWorst)}`);
 console.log(`${pad('at 60fps, mixed', 40)}${num(frameMean * 60 / 1e6)}M tris/sec`);
