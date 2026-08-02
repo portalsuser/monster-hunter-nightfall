@@ -151,8 +151,31 @@ export class Pickups {
   }
 
   spawnChest(playerPos) {
-    const slot = this.chests.find((c) => !c.alive);
-    if (!slot) return null;
+    let slot = this.chests.find((c) => !c.alive);
+
+    // No free slot: take the one furthest away rather than giving up.
+    //
+    // Slots were only ever freed by breaking a chest or by getting 70 units
+    // clear of it. A player who kites in a circle does neither, so all four
+    // filled with chests they had circled past and every later spawn was
+    // silently dropped — which looked exactly like "chests stopped appearing on
+    // level 2", because that is when the fourth slot filled. A fresh chest near
+    // the hunter is worth more than a stale one he already walked away from.
+    if (!slot) {
+      let best = null, bestD2 = -1;
+      for (const c of this.chests) {
+        const dx = c.x - playerPos.x, dz = c.z - playerPos.z;
+        const d2 = dx * dx + dz * dz;
+        if (d2 > bestD2) { bestD2 = d2; best = c; }
+      }
+      // Leave alone anything still close enough that the hunter is plausibly
+      // walking to it. Chests spawn 12-24 units out, so the guard has to sit
+      // below that or a kiting player never frees a slot at all.
+      if (!best || bestD2 < 14 * 14) return null;
+      best.alive = false;
+      best.group.visible = false;
+      slot = best;
+    }
     const p = ringPoint(playerPos.x, playerPos.z, CFG.CHEST.spawnRadius[0], CFG.CHEST.spawnRadius[1]);
     slot.alive = true;
     slot.x = p.x;
@@ -239,8 +262,9 @@ export class Pickups {
       const dx = c.x - p.x, dz = c.z - p.z;
       if (dx * dx + dz * dz < 1.3 * 1.3) this.hurtChest(c, 40 * dt);
 
-      // Chests too far behind are recycled.
-      if (dx * dx + dz * dz > 70 * 70) {
+      // Chests too far behind are recycled. 70 was well past the fog, so a
+      // chest could sit forever just off screen holding a slot hostage.
+      if (dx * dx + dz * dz > 46 * 46) {
         c.alive = false;
         c.group.visible = false;
       }

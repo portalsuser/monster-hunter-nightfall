@@ -23,6 +23,7 @@ class Game {
     this.abandoned = false;
     this.pendingLevelUps = 0;
     this.level = 1;              // game level, not the hunter's XP level
+    this.levelTime = 0;          // seconds into the current level — drives difficulty
     this.levelPhase = null;      // null | 'clearing' | 'interlude'
     this.levelTimer = 0;
     this.levelSweepR = 0;
@@ -193,6 +194,7 @@ class Game {
     this.abandoned = false;
     this.pendingLevelUps = 0;
     this.level = 1;
+    this.levelTime = 0;
     this.levelPhase = null;
     this.levelTimer = 0;
     this.levelSweepR = 0;
@@ -396,6 +398,7 @@ class Game {
   /** Starts a level: the horde returns and its boss clock begins. */
   _beginLevel(n) {
     this.level = n;
+    this.levelTime = 0;          // every level ramps from calm, exactly like level 1
     this.levelPhase = null;
     this.levelSweepR = 0;
     // levelSwept is deliberately NOT cleared here — _beginLevelClear zeroes it
@@ -541,6 +544,9 @@ class Game {
       dt = rawDt * 0.25;
     }
     this.elapsed += dt;
+    // The level clock stops while a level is being cleared, so the breather
+    // never counts toward the next level's ramp.
+    if (!this.levelPhase) this.levelTime += dt;
 
     const move = this.input.update();
     this.player.update(dt, move);

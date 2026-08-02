@@ -150,17 +150,33 @@ export const CFG = {
   MAX_PARTICLES: 1300,
 };
 
-/** Difficulty scalars driven by elapsed run time (seconds). */
-export function difficulty(t) {
-  const m = t / 60;
+/**
+ * Difficulty scalars.
+ *
+ * Driven by time into the CURRENT LEVEL, not by the run clock. Running it off
+ * total elapsed time meant level 2 opened at whatever minute 3.5 looked like —
+ * a wall of monsters the instant the banner cleared, with none of the ramp that
+ * makes the opening of a level readable. Every level now gets the same
+ * three-minute build that level 1 has.
+ *
+ * What makes level 2 harder than level 1 is the tier step, not the clock: the
+ * monsters are new and tougher, and there are the same number of them.
+ */
+export function difficulty(levelTime, level = 1) {
+  const m = Math.max(0, levelTime) / 60;   // minutes into this level
+  const L = Math.max(0, level - 1);        // levels cleared
+  const tier = 1 + L * 0.55;               // each level's roster hits harder
+
   return {
-    hpMul: 1 + m * 0.34 + Math.pow(m, 1.7) * 0.035,
-    dmgMul: 1 + m * 0.16,
-    speedMul: 1 + Math.min(0.45, m * 0.035),
-    // Quadratic rather than linear: the 2-3 minute mark was chaotic on a
-    // straight ramp. This is markedly calmer through the early game and
-    // steeper than the old curve past ~15 minutes.
+    hpMul: (1 + m * 0.34 + Math.pow(m, 1.7) * 0.035) * tier,
+    dmgMul: (1 + m * 0.16) * (1 + L * 0.22),
+    speedMul: 1 + Math.min(0.45, m * 0.035) + Math.min(0.3, L * 0.05),
+    // Deliberately NOT scaled by level: the count curve is the same shape every
+    // level, so the horde never becomes the difficulty. Quadratic in m because
+    // the 2-3 minute mark was chaotic on a straight ramp.
     countMul: 1 + m * 0.17 + m * m * 0.013,
-    xpMul: 1 + m * 0.1,
+    // Tougher monsters are worth proportionately more, so a level's parts
+    // budget keeps pace with the tier its enemies are drawn from.
+    xpMul: (1 + m * 0.1) * tier,
   };
 }

@@ -69,6 +69,90 @@ function bruteArm() {
   return mergeGeos([limb, fist]);
 }
 
+
+/** Mireling arm: a long dragging limb ending in a splayed hand. */
+function mirelingArm(side) {
+  const upper = new THREE.CapsuleGeometry(0.07, 0.34, 6, 12);
+  upper.rotateZ(side * 1.15);
+  upper.translate(side * 0.26, 0.06, 0.06);
+  const fore = new THREE.CapsuleGeometry(0.055, 0.3, 6, 12);
+  fore.rotateZ(side * 0.35);
+  fore.translate(side * 0.44, -0.16, 0.18);
+  const hand = new THREE.IcosahedronGeometry(0.09, 1);
+  hand.translate(side * 0.5, -0.32, 0.26);
+  const claws = [];
+  for (let i = 0; i < 3; i++) {
+    const c = new THREE.ConeGeometry(0.016, 0.13, 5);
+    c.rotateX(2.4);
+    c.translate(side * (0.46 + i * 0.04), -0.36, 0.34);
+    claws.push(c);
+  }
+  return mergeGeos([upper, fore, hand, ...claws]);
+}
+
+/** Thornback legs: a jointed pair for the front or back of the body. */
+function thornLegs(dir) {
+  const parts = [];
+  for (const side of [-1, 1]) {
+    const thigh = new THREE.CylinderGeometry(0.045, 0.036, 0.5, 8);
+    thigh.rotateZ(side * 0.16);
+    thigh.rotateX(dir * 0.22);
+    thigh.translate(side * 0.16, -0.24, dir * 0.05);
+    const shin = new THREE.CylinderGeometry(0.032, 0.022, 0.46, 8);
+    shin.rotateZ(side * -0.1);
+    shin.rotateX(dir * -0.3);
+    shin.translate(side * 0.19, -0.68, -dir * 0.04);
+    const hoof = new THREE.ConeGeometry(0.045, 0.12, 7);
+    hoof.rotateX(Math.PI);
+    hoof.translate(side * 0.2, -0.92, -dir * 0.06);
+    const knee = new THREE.SphereGeometry(0.042, 9, 7);
+    knee.translate(side * 0.175, -0.47, dir * 0.01);
+    parts.push(thigh, shin, hoof, knee);
+  }
+  return mergeGeos(parts);
+}
+
+/** Carrion Moth wing pair: a broad blade with veins and an eyespot. */
+function mothWing(span, chord, sweep) {
+  const parts = [];
+  for (const side of [-1, 1]) {
+    const web = new THREE.PlaneGeometry(span, chord, 8, 6);
+    web.translate(side * span * 0.5, 0, sweep);
+    parts.push(web);
+    // Leading edge and two veins, so the wing does not read as a flat card.
+    const edge = new THREE.CylinderGeometry(0.015, 0.011, span, 6);
+    edge.rotateZ(Math.PI / 2);
+    edge.translate(side * span * 0.5, chord * 0.45, sweep);
+    parts.push(edge);
+    for (let k = 0; k < 2; k++) {
+      const vein = new THREE.CylinderGeometry(0.008, 0.006, span * 0.8, 5);
+      vein.rotateZ(Math.PI / 2.15);
+      vein.translate(side * span * 0.45, -chord * (0.05 + k * 0.22), sweep);
+      parts.push(vein);
+    }
+    const spot = new THREE.CircleGeometry(chord * 0.16, 12);
+    spot.translate(side * span * 0.62, chord * 0.08, sweep + 0.012);
+    parts.push(spot);
+  }
+  return mergeGeos(parts);
+}
+
+/** Bog Fiend arm: a thick limb ending in a dripping fist. */
+function bogArm(side) {
+  const upper = new THREE.CapsuleGeometry(0.15, 0.5, 7, 14);
+  upper.rotateZ(side * 0.24);
+  upper.translate(side * 0.42, -0.2, 0);
+  const fist = new THREE.IcosahedronGeometry(0.22, 1);
+  fist.translate(side * 0.56, -0.62, 0.04);
+  const knuckles = [];
+  for (let i = 0; i < 3; i++) {
+    const k = new THREE.SphereGeometry(0.07, 9, 7);
+    k.translate(side * (0.5 + i * 0.06), -0.72, 0.16);
+    knuckles.push(k);
+  }
+  return mergeGeos([upper, fist, ...knuckles]);
+}
+
 // ---------------------------------------------------------------------------
 // Trash mob type definitions
 // ---------------------------------------------------------------------------
@@ -489,13 +573,499 @@ function makeTypes() {
     ],
   };
 
+
+  // =========================================================================
+  // Level 2 roster — the mire. Entirely separate creatures from the forest
+  // floor above: heavier, wetter, and built on different silhouettes so the
+  // change of level reads instantly rather than looking like a recolour.
+  // =========================================================================
+
+  // --- Mireling: the swarm unit of the bog ---------------------------------
+  // Deliberately unlike the Grotling: no upright stance, no weapon. It drags
+  // itself forward on long arms with its body slung underneath.
+  const MIRE = 0x4a6b52;
+  const MIRE_D = 0x2f4736;
+  types.mireling = {
+    name: 'Mireling',
+    hp: 13, speed: 2.9, dmg: 8, radius: 0.54, xp: 3, scale: 1,
+    tint: 0x4a6b52, blood: 0x2c4a2e,
+    minute: 0,
+    parts: [
+      { // slung body
+        geo: () => {
+          const g = new THREE.SphereGeometry(0.34, 20, 15);
+          g.scale(1, 0.72, 1.25);
+          return g;
+        },
+        mat: () => stdMat(MIRE_D),
+        place: (d, e, t) => {
+          const crawl = Math.abs(Math.sin(t * 7 + e.phase)) * 0.06;
+          d.position.set(e.x, (0.34 + crawl) * e.scale, e.z);
+          d.rotation.set(0.18, e.yaw, Math.sin(t * 7 + e.phase) * 0.1);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // crusted back plates
+        geo: () => {
+          const g = [];
+          for (let i = 0; i < 4; i++) {
+            const q = new THREE.SphereGeometry(0.15 - i * 0.02, 12, 8, 0, TAU, 0, Math.PI * 0.5);
+            q.rotateX(-0.25);
+            q.translate(0, 0.16 - i * 0.015, 0.2 - i * 0.16);
+            g.push(q);
+          }
+          return mergeGeos(g);
+        },
+        mat: () => stdMat(0x243a2b),
+        place: (d, e, t) => {
+          const crawl = Math.abs(Math.sin(t * 7 + e.phase)) * 0.06;
+          d.position.set(e.x, (0.34 + crawl) * e.scale, e.z);
+          d.rotation.set(0.18, e.yaw, Math.sin(t * 7 + e.phase) * 0.1);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // drooping head
+        geo: () => {
+          const skull = new THREE.SphereGeometry(0.19, 16, 12);
+          skull.scale(1, 0.85, 1.15);
+          const jaw = new THREE.BoxGeometry(0.17, 0.07, 0.2, 2, 1, 2);
+          jaw.translate(0, -0.13, 0.08);
+          return mergeGeos([skull, jaw]);
+        },
+        mat: () => stdMat(MIRE),
+        place: (d, e, t) => {
+          const bob = Math.sin(t * 7 + e.phase) * 0.05;
+          d.position.set(e.x + Math.sin(e.yaw) * 0.36 * e.scale,
+                         (0.3 + bob) * e.scale,
+                         e.z + Math.cos(e.yaw) * 0.36 * e.scale);
+          d.rotation.set(0.45, e.yaw + Math.sin(t * 2.4 + e.phase) * 0.2, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // split eyes — four in a row, low and wide
+        geo: () => {
+          const g = [];
+          for (const x of [-0.11, -0.045, 0.045, 0.11]) {
+            const q = new THREE.SphereGeometry(0.028, 10, 8);
+            q.translate(x, 0.02, 0.15);
+            g.push(q);
+          }
+          return mergeGeos(g);
+        },
+        mat: () => new THREE.MeshBasicMaterial({ color: 0xc6ff5a }),
+        place: (d, e, t) => {
+          const bob = Math.sin(t * 7 + e.phase) * 0.05;
+          d.position.set(e.x + Math.sin(e.yaw) * 0.36 * e.scale,
+                         (0.3 + bob) * e.scale,
+                         e.z + Math.cos(e.yaw) * 0.36 * e.scale);
+          d.rotation.set(0.45, e.yaw + Math.sin(t * 2.4 + e.phase) * 0.2, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // left dragging arm
+        geo: () => mirelingArm(-1),
+        mat: () => stdMat(MIRE),
+        place: (d, e, t) => {
+          d.position.set(e.x, 0.36 * e.scale, e.z);
+          d.rotation.set(Math.sin(t * 7 + e.phase) * 0.5, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // right dragging arm, opposite phase
+        geo: () => mirelingArm(1),
+        mat: () => stdMat(MIRE),
+        place: (d, e, t) => {
+          d.position.set(e.x, 0.36 * e.scale, e.z);
+          d.rotation.set(-Math.sin(t * 7 + e.phase) * 0.5, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // reed spines sprouting from the back
+        geo: () => {
+          const g = [];
+          for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * TAU;
+            const q = new THREE.ConeGeometry(0.018, 0.34, 6);
+            q.rotateZ(Math.sin(a) * 0.5);
+            q.rotateX(-0.3 + Math.cos(a) * 0.25);
+            q.translate(Math.sin(a) * 0.15, 0.28, -0.05 + Math.cos(a) * 0.14);
+            g.push(q);
+          }
+          return mergeGeos(g);
+        },
+        mat: () => stdMat(0x6d7a3a),
+        place: (d, e, t) => {
+          d.position.set(e.x, 0.36 * e.scale, e.z);
+          d.rotation.set(0.18, e.yaw, Math.sin(t * 7 + e.phase) * 0.14);
+          d.scale.setScalar(e.scale);
+        },
+      },
+    ],
+  };
+
+  // --- Thornback: the mire's flanker ---------------------------------------
+  // Tall and spindly where the Gloomwolf is low and heavy, so the two never
+  // read as the same animal even at a glance.
+  const BARK = 0x5a4630;
+  const BARK_D = 0x3a2c1c;
+  types.thornback = {
+    name: 'Thornback',
+    hp: 26, speed: 5.6, dmg: 12, radius: 0.62, xp: 4, scale: 1.1,
+    tint: 0x5a4630, blood: 0x5a2a1a,
+    minute: 0.6,
+    parts: [
+      { // narrow deep body
+        geo: () => {
+          const g = new THREE.CapsuleGeometry(0.2, 0.66, 10, 18);
+          g.rotateX(Math.PI / 2);
+          g.scale(1, 1.35, 1);
+          return g;
+        },
+        mat: () => stdMat(BARK_D),
+        place: (d, e, t) => {
+          d.position.set(e.x, (1.02 + Math.sin(t * 11 + e.phase) * 0.05) * e.scale, e.z);
+          d.rotation.set(0, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // long neck
+        geo: () => {
+          const g = new THREE.CylinderGeometry(0.09, 0.14, 0.62, 12);
+          g.rotateX(0.75);
+          g.translate(0, 0.2, 0.22);
+          return g;
+        },
+        mat: () => stdMat(BARK),
+        place: (d, e, t) => {
+          d.position.set(e.x + Math.sin(e.yaw) * 0.34 * e.scale,
+                         (1.14 + Math.sin(t * 11 + e.phase) * 0.05) * e.scale,
+                         e.z + Math.cos(e.yaw) * 0.34 * e.scale);
+          d.rotation.set(Math.sin(t * 5 + e.phase) * 0.08, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // elongated skull + antlers
+        geo: () => {
+          const skull = new THREE.ConeGeometry(0.13, 0.44, 14);
+          skull.rotateX(Math.PI / 2);
+          const antlers = [];
+          for (const side of [-1, 1]) {
+            const beam = new THREE.CylinderGeometry(0.022, 0.03, 0.42, 7);
+            beam.rotateZ(side * 0.5); beam.rotateX(-0.35);
+            beam.translate(side * 0.12, 0.24, -0.05);
+            antlers.push(beam);
+            for (let k = 0; k < 3; k++) {
+              const tine = new THREE.ConeGeometry(0.016, 0.2, 6);
+              tine.rotateZ(side * (0.9 + k * 0.25));
+              tine.translate(side * (0.2 + k * 0.05), 0.3 + k * 0.1, -0.06 - k * 0.04);
+              antlers.push(tine);
+            }
+          }
+          return mergeGeos([skull, ...antlers]);
+        },
+        mat: () => stdMat(0x7d6a4a),
+        place: (d, e, t) => {
+          d.position.set(e.x + Math.sin(e.yaw) * 0.74 * e.scale,
+                         (1.42 + Math.sin(t * 11 + e.phase) * 0.05) * e.scale,
+                         e.z + Math.cos(e.yaw) * 0.74 * e.scale);
+          d.rotation.set(0.2 + Math.sin(t * 5 + e.phase) * 0.1, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // eyes
+        geo: () => {
+          const a = new THREE.SphereGeometry(0.04, 12, 9); a.translate(-0.075, 0.03, 0.1);
+          const b = new THREE.SphereGeometry(0.04, 12, 9); b.translate(0.075, 0.03, 0.1);
+          return mergeGeos([a, b]);
+        },
+        mat: () => new THREE.MeshBasicMaterial({ color: 0xffe14a }),
+        place: (d, e, t) => {
+          d.position.set(e.x + Math.sin(e.yaw) * 0.74 * e.scale,
+                         (1.42 + Math.sin(t * 11 + e.phase) * 0.05) * e.scale,
+                         e.z + Math.cos(e.yaw) * 0.74 * e.scale);
+          d.rotation.set(0.2, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // front legs — long, thin, jointed
+        geo: () => thornLegs(1),
+        mat: () => stdMat(BARK_D),
+        place: (d, e, t) => {
+          d.position.set(e.x + Math.sin(e.yaw) * 0.26 * e.scale, 0.98 * e.scale, e.z + Math.cos(e.yaw) * 0.26 * e.scale);
+          d.rotation.set(Math.sin(t * 13 + e.phase) * 0.7, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // back legs, opposite phase
+        geo: () => thornLegs(-1),
+        mat: () => stdMat(BARK_D),
+        place: (d, e, t) => {
+          d.position.set(e.x - Math.sin(e.yaw) * 0.3 * e.scale, 0.98 * e.scale, e.z - Math.cos(e.yaw) * 0.3 * e.scale);
+          d.rotation.set(-Math.sin(t * 13 + e.phase) * 0.7, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // thorn ridge down the spine
+        geo: () => {
+          const g = [];
+          for (let i = 0; i < 7; i++) {
+            const q = new THREE.ConeGeometry(0.03, 0.2 - i * 0.012, 6);
+            q.rotateX(-0.5);
+            q.translate(0, 0.24, 0.3 - i * 0.11);
+            g.push(q);
+          }
+          return mergeGeos(g);
+        },
+        mat: () => stdMat(0x2a2018),
+        place: (d, e, t) => {
+          d.position.set(e.x, (1.02 + Math.sin(t * 11 + e.phase) * 0.05) * e.scale, e.z);
+          d.rotation.set(0, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // whip tail
+        geo: () => {
+          const g = new THREE.ConeGeometry(0.06, 0.62, 10, 3);
+          g.rotateX(-Math.PI / 2);
+          g.translate(0, 0, -0.3);
+          return g;
+        },
+        mat: () => stdMat(BARK),
+        place: (d, e, t) => {
+          d.position.set(e.x - Math.sin(e.yaw) * 0.52 * e.scale, 1.06 * e.scale, e.z - Math.cos(e.yaw) * 0.52 * e.scale);
+          d.rotation.set(-0.3, e.yaw + Math.sin(t * 8 + e.phase) * 0.6, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+    ],
+  };
+
+  // --- Carrion Moth: the mire's flyer --------------------------------------
+  // Four wings and a fat furred body, against the Nightwing's two thin ones.
+  const MOTH = 0x6a5a72;
+  types.moth = {
+    name: 'Carrion Moth',
+    hp: 16, speed: 5.4, dmg: 9, radius: 0.46, xp: 4, scale: 1,
+    tint: 0x6a5a72, blood: 0x6a4a58,
+    minute: 1.4, flying: true, weave: 3.6,
+    parts: [
+      { // furred thorax
+        geo: () => {
+          const g = new THREE.SphereGeometry(0.24, 18, 14);
+          g.scale(1, 1, 1.25);
+          return g;
+        },
+        mat: () => stdMat(0x574a60, { roughness: 1 }),
+        place: (d, e, t) => {
+          d.position.set(e.x, e.y, e.z);
+          d.rotation.set(0.2, e.yaw, Math.sin(t * 16 + e.phase) * 0.14);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // segmented abdomen
+        geo: () => {
+          const g = [];
+          for (let i = 0; i < 3; i++) {
+            const q = new THREE.SphereGeometry(0.16 - i * 0.035, 14, 10);
+            q.translate(0, -0.02 - i * 0.03, -0.26 - i * 0.19);
+            g.push(q);
+          }
+          return mergeGeos(g);
+        },
+        mat: () => stdMat(0x453a4c),
+        place: (d, e, t) => {
+          d.position.set(e.x, e.y, e.z);
+          d.rotation.set(0.2, e.yaw, Math.sin(t * 16 + e.phase) * 0.14);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // head, plumed antennae and eyes
+        geo: () => {
+          const head = new THREE.SphereGeometry(0.13, 14, 10);
+          head.translate(0, 0.02, 0.26);
+          const ant = [];
+          for (const side of [-1, 1]) {
+            const stalk = new THREE.CylinderGeometry(0.012, 0.016, 0.3, 6);
+            stalk.rotateZ(side * 0.6); stalk.rotateX(-0.5);
+            stalk.translate(side * 0.1, 0.18, 0.3);
+            ant.push(stalk);
+            for (let k = 0; k < 4; k++) {
+              const frond = new THREE.ConeGeometry(0.012, 0.09, 5);
+              frond.rotateZ(side * 1.3);
+              frond.translate(side * (0.13 + k * 0.03), 0.12 + k * 0.05, 0.3);
+              ant.push(frond);
+            }
+          }
+          return mergeGeos([head, ...ant]);
+        },
+        mat: () => stdMat(0x6d5f78, { roughness: 1 }),
+        place: (d, e, t) => {
+          d.position.set(e.x, e.y, e.z);
+          d.rotation.set(0.2, e.yaw, Math.sin(t * 16 + e.phase) * 0.14);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // compound eyes
+        geo: () => {
+          const a = new THREE.SphereGeometry(0.055, 12, 9); a.translate(-0.08, 0.03, 0.31);
+          const b = new THREE.SphereGeometry(0.055, 12, 9); b.translate(0.08, 0.03, 0.31);
+          return mergeGeos([a, b]);
+        },
+        mat: () => new THREE.MeshBasicMaterial({ color: 0xff9f4a }),
+        place: (d, e, t) => {
+          d.position.set(e.x, e.y, e.z);
+          d.rotation.set(0.2, e.yaw, Math.sin(t * 16 + e.phase) * 0.14);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // upper wings — broad, with eyespots
+        geo: () => mothWing(0.78, 0.5, 0.12),
+        mat: () => stdMat(MOTH, { side: THREE.DoubleSide, transparent: true, opacity: 0.92 }),
+        place: (d, e, t) => {
+          d.position.set(e.x, e.y, e.z);
+          d.rotation.set(0.1, e.yaw, Math.sin(t * 15 + e.phase) * 0.75 + 0.25);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // lower wings, trailing the beat
+        geo: () => mothWing(0.54, 0.4, -0.2),
+        mat: () => stdMat(0x584a62, { side: THREE.DoubleSide, transparent: true, opacity: 0.88 }),
+        place: (d, e, t) => {
+          d.position.set(e.x, e.y - 0.1 * e.scale, e.z);
+          d.rotation.set(0.1, e.yaw, Math.sin(t * 15 + e.phase - 0.7) * 0.6 + 0.15);
+          d.scale.setScalar(e.scale);
+        },
+      },
+    ],
+  };
+
+  // --- Bog Fiend: the mire's heavy -----------------------------------------
+  const OOZE = 0x3d5140;
+  types.bogfiend = {
+    name: 'Bog Fiend',
+    hp: 44, speed: 3.0, dmg: 17, radius: 0.8, xp: 7, scale: 1.3,
+    tint: 0x3d5140, blood: 0x24401f,
+    minute: 2.2, cluster: [2, 3],
+    parts: [
+      { // heavy sagging mass
+        geo: () => {
+          const g = new THREE.SphereGeometry(0.46, 20, 15);
+          g.scale(1.1, 0.9, 1);
+          return g;
+        },
+        mat: () => stdMat(OOZE, { roughness: 0.95 }),
+        place: (d, e, t) => {
+          const heave = Math.sin(t * 4.5 + e.phase) * 0.05;
+          d.position.set(e.x, (0.66 + heave) * e.scale, e.z);
+          d.rotation.set(0.1, e.yaw, Math.sin(t * 4.5 + e.phase) * 0.07);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // crusted shoulder shell
+        geo: () => {
+          const g = [];
+          for (const side of [-1, 1]) {
+            const q = new THREE.SphereGeometry(0.26, 14, 10, 0, TAU, 0, Math.PI * 0.55);
+            q.rotateZ(side * 0.5);
+            q.translate(side * 0.32, 0.2, -0.02);
+            g.push(q);
+          }
+          const ridge = new THREE.SphereGeometry(0.2, 14, 10, 0, TAU, 0, Math.PI * 0.5);
+          ridge.translate(0, 0.34, -0.12);
+          g.push(ridge);
+          return mergeGeos(g);
+        },
+        mat: () => stdMat(0x27351f),
+        place: (d, e, t) => {
+          const heave = Math.sin(t * 4.5 + e.phase) * 0.05;
+          d.position.set(e.x, (0.66 + heave) * e.scale, e.z);
+          d.rotation.set(0.1, e.yaw, Math.sin(t * 4.5 + e.phase) * 0.07);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // sunken head, half swallowed by the shoulders
+        geo: () => {
+          const skull = new THREE.SphereGeometry(0.21, 16, 12);
+          skull.scale(1, 0.9, 1.1);
+          const maw = new THREE.ConeGeometry(0.15, 0.26, 12, 1, true);
+          maw.rotateX(-Math.PI / 2);
+          maw.translate(0, -0.06, 0.2);
+          return mergeGeos([skull, maw]);
+        },
+        mat: () => stdMat(0x4e6350),
+        place: (d, e, t) => {
+          const heave = Math.sin(t * 4.5 + e.phase) * 0.05;
+          d.position.set(e.x + Math.sin(e.yaw) * 0.2 * e.scale,
+                         (0.86 + heave) * e.scale,
+                         e.z + Math.cos(e.yaw) * 0.2 * e.scale);
+          d.rotation.set(0.24, e.yaw + Math.sin(t * 2 + e.phase) * 0.14, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // eyes, deep in the sockets
+        geo: () => {
+          const a = new THREE.SphereGeometry(0.045, 12, 9); a.translate(-0.09, 0.04, 0.15);
+          const b = new THREE.SphereGeometry(0.045, 12, 9); b.translate(0.09, 0.04, 0.15);
+          return mergeGeos([a, b]);
+        },
+        mat: () => new THREE.MeshBasicMaterial({ color: 0x9fff6a }),
+        place: (d, e, t) => {
+          const heave = Math.sin(t * 4.5 + e.phase) * 0.05;
+          d.position.set(e.x + Math.sin(e.yaw) * 0.2 * e.scale,
+                         (0.86 + heave) * e.scale,
+                         e.z + Math.cos(e.yaw) * 0.2 * e.scale);
+          d.rotation.set(0.24, e.yaw + Math.sin(t * 2 + e.phase) * 0.14, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // left arm
+        geo: () => bogArm(-1),
+        mat: () => stdMat(0x455c48),
+        place: (d, e, t) => {
+          d.position.set(e.x, 0.78 * e.scale, e.z);
+          d.rotation.set(Math.sin(t * 4.5 + e.phase) * 0.34, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // right arm, opposite swing
+        geo: () => bogArm(1),
+        mat: () => stdMat(0x455c48),
+        place: (d, e, t) => {
+          d.position.set(e.x, 0.78 * e.scale, e.z);
+          d.rotation.set(-Math.sin(t * 4.5 + e.phase) * 0.34, e.yaw, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+      { // sludge dripping off the underside
+        geo: () => {
+          const g = [];
+          for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * TAU;
+            const q = new THREE.ConeGeometry(0.05, 0.28, 7);
+            q.rotateX(Math.PI);
+            q.translate(Math.sin(a) * 0.3, -0.3, Math.cos(a) * 0.28);
+            g.push(q);
+          }
+          return mergeGeos(g);
+        },
+        mat: () => stdMat(0x1f2e19, { transparent: true, opacity: 0.9 }),
+        place: (d, e, t) => {
+          const heave = Math.sin(t * 4.5 + e.phase) * 0.05;
+          d.position.set(e.x, (0.66 + heave) * e.scale, e.z);
+          d.rotation.set(0, e.yaw + t * 0.3, 0);
+          d.scale.setScalar(e.scale);
+        },
+      },
+    ],
+  };
+
   // --- Bonegnasher: slow, tanky, hits hard ---------------------------------
   const BONE = 0xbfb49a;
   types.brute = {
     name: 'Bonegnasher',
     hp: 70, speed: 2.4, dmg: 20, radius: 0.95, xp: 9, scale: 1.5,
     tint: 0x6b5a45, blood: 0x8a2b2b,
-    minute: 3,
+    minute: 0.6,
     parts: [
       { // torso
         geo: () => new THREE.CapsuleGeometry(0.5, 0.7, 8, 18),
@@ -610,7 +1180,7 @@ function makeTypes() {
     name: 'Corpse Light',
     hp: 22, speed: 2.8, dmg: 10, radius: 0.5, xp: 6, scale: 1,
     tint: 0x5ad6ff, blood: 0x7fe8ff,
-    minute: 4, flying: true, ranged: { range: 12, cooldown: 2.6, speed: 8.5, dmg: 9 },
+    minute: 1.4, flying: true, ranged: { range: 12, cooldown: 2.6, speed: 8.5, dmg: 9 },
     parts: [
       { // core
         geo: () => new THREE.IcosahedronGeometry(0.3, 2),
@@ -665,7 +1235,7 @@ function makeTypes() {
     name: 'Revenant',
     hp: 46, speed: 4.3, dmg: 15, radius: 0.6, xp: 8, scale: 1.05,
     tint: 0x4a4f5e, blood: 0x3a2a4a,
-    minute: 5,
+    minute: 0,
     parts: [
       { // tattered robe
         geo: () => new THREE.ConeGeometry(0.42, 1.5, 24, 7, true),
@@ -757,7 +1327,7 @@ function makeTypes() {
     name: 'Shrieker',
     hp: 30, speed: 5.0, dmg: 12, radius: 0.62, xp: 6, scale: 1.1,
     tint: 0xa33f2a, blood: 0xff8a3c,
-    minute: 6, explodes: { radius: 3.4, dmg: 26 },
+    minute: 2.2, explodes: { radius: 3.4, dmg: 26 },
     parts: [
       { // swollen body
         geo: () => new THREE.SphereGeometry(0.44, 24, 18),
@@ -833,6 +1403,24 @@ function makeTypes() {
 }
 
 export const ENEMY_TYPES = makeTypes();
+
+/**
+ * Which monsters belong to which game level.
+ *
+ * Each level draws from its own roster, and every `minute` field above is
+ * minutes into THAT level rather than into the run — so each level unlocks its
+ * four types on the same schedule level 1 always had. Past the last roster the
+ * list cycles, with difficulty() scaling the tier.
+ */
+export const ROSTERS = [
+  ['goblin', 'wolf', 'bat', 'spider'],            // 1 — the forest floor
+  ['mireling', 'thornback', 'moth', 'bogfiend'],  // 2 — the mire
+  ['revenant', 'brute', 'wisp', 'shrieker'],      // 3 — the barrow
+];
+
+export function rosterFor(level) {
+  return ROSTERS[(Math.max(1, level) - 1) % ROSTERS.length];
+}
 
 // ---------------------------------------------------------------------------
 // Bosses — hand-built hierarchies, at most a couple alive at once
@@ -1085,7 +1673,7 @@ export class EnemyManager {
   }
 
   _buildInstances() {
-    const CAP = 260;
+    const CAP = CFG.SPAWN.maxAlive + 8;   // the pool only ever needs the cap
     this.render = {};
     for (const key of this.typeKeys) {
       const def = ENEMY_TYPES[key];
@@ -1124,9 +1712,9 @@ export class EnemyManager {
   // ---- spawning -----------------------------------------------------------
 
   /** Types unlocked at the current run time, weighted so newer ones dominate. */
-  _spawnTable(minutes) {
+  _spawnTable(minutes, level) {
     const table = [];
-    for (const key of this.typeKeys) {
+    for (const key of rosterFor(level)) {
       const def = ENEMY_TYPES[key];
       if (minutes < def.minute) continue;
       const age = minutes - def.minute;
@@ -1134,7 +1722,9 @@ export class EnemyManager {
       const w = Math.min(1, 0.25 + age) * (1 / (1 + age * 0.12));
       table.push([key, w]);
     }
-    if (!table.length) table.push(['goblin', 1]);
+    // Before the first unlock there is still a wave due; open with whatever
+    // leads this level's roster rather than defaulting to a Grotling.
+    if (!table.length) table.push([rosterFor(level)[0], 1]);
     return table;
   }
 
@@ -1145,7 +1735,7 @@ export class EnemyManager {
     if (bucket.list.length >= bucket.cap) return null;
 
     const def = ENEMY_TYPES[key];
-    const d = difficulty(elapsed);
+    const d = difficulty(this.game.levelTime ?? elapsed, this.game.level || 1);
     const e = bucket.pool.pop() || {};
     e.alive = true;
     e.key = key;
@@ -1178,9 +1768,12 @@ export class EnemyManager {
 
   spawnWave(player, elapsed) {
     const playerPos = player.pos;
-    const d = difficulty(elapsed);
-    const minutes = elapsed / 60;
-    const table = this._spawnTable(minutes);
+    // Level time, not run time: a level's horde builds from calm every time.
+    const lvl = this.game.level || 1;
+    const lt = this.game.levelTime ?? elapsed;
+    const d = difficulty(lt, lvl);
+    const minutes = lt / 60;
+    const table = this._spawnTable(minutes, lvl);
     let count = Math.round(CFG.SPAWN.baseCount * d.countMul);
     count = clamp(count, 1, 17);
 
@@ -1218,7 +1811,7 @@ export class EnemyManager {
       player.vel ? player.vel.x : 0, player.vel ? player.vel.z : 0, 0.8
     );
     const mul = 1 + cycle * 1.15;
-    const d = difficulty(elapsed);
+    const d = difficulty(this.game.levelTime ?? elapsed, this.game.level || 1);
 
     const boss = {
       alive: true, isBoss: true, def,
@@ -1385,7 +1978,7 @@ export class EnemyManager {
 
   update(dt, player, elapsed) {
     // 1. Timers -------------------------------------------------------------
-    const d = difficulty(elapsed);
+    const d = difficulty(this.game.levelTime ?? elapsed, this.game.level || 1);
     if (!this.spawnPaused) {
       this.spawnTimer -= dt;
       if (this.spawnTimer <= 0) {
@@ -1495,7 +2088,7 @@ export class EnemyManager {
       e.rangedCd -= dt;
       if (e.rangedCd <= 0 && dist < rng.range * 1.1) {
         e.rangedCd = rng.cooldown * rand(0.85, 1.2);
-        this.fireProjectile(e.x, e.y || 1.2, e.z, px, pz, rng.speed, rng.dmg * difficulty(elapsed).dmgMul, 0x63d9ff);
+        this.fireProjectile(e.x, e.y || 1.2, e.z, px, pz, rng.speed, rng.dmg * difficulty(this.game.levelTime ?? elapsed, this.game.level || 1).dmgMul, 0x63d9ff);
       }
     }
 
