@@ -736,6 +736,130 @@ console.log('▶ phase 10 — every weapon at every rank');
   game.restart();
 }
 
+// --- Phase 11: levels ---------------------------------------------------------
+console.log('▶ phase 11 — levels, boss clears and the sweep');
+{
+  game.restart();
+  game.state = 'playing';
+  const E = game.enemies;
+
+  // This phase is about the level machinery, not survival: a hunter with only
+  // his fists cannot outlast four boss cycles, and dying mid-test would fail
+  // for reasons that have nothing to do with levels.
+  const immortal = () => { game.player.stats.maxHp = 1e9; game.player.stats.hp = 1e9; };
+  immortal();
+
+  if (game.level !== 1) fail(`a fresh run starts on level ${game.level}, expected 1`);
+
+  /** Runs frames until `pred` or the budget runs out. */
+  const until = (pred, secs = 40, input = { x: 0, z: 0 }) => {
+    for (let i = 0; i < 60 * secs; i++) {
+      if (pred()) return true;
+      if (i % 60 === 0) immortal();
+      frame(input);
+    }
+    return pred();
+  };
+
+  // Run the clock forward to when a boss actually turns up: spawn density at
+  // t=0 is a trickle, and a level clear is only interesting against the horde
+  // that is genuinely on the field three minutes in.
+  game.elapsed = CFG.FIRST_BOSS_AT;
+  if (!until(() => E.trashAlive > 25, 90)) fail('the horde never built up on level 1');
+  E.bossTimer = 0;
+  if (!until(() => E.bosses.length > 0, 10)) fail('forcing the boss clock did not spawn a boss');
+
+  // Exactly one boss per level: the clock must not rearm while it is alive.
+  const bossHp = E.bosses[0].hp;
+  E.bosses[0].hp = 1e9;                        // keep it up well past BOSS_INTERVAL
+  for (let i = 0; i < 60 * (CFG.BOSS_INTERVAL + 20); i++) { if (i % 60 === 0) immortal(); frame(); }
+  if (E.bosses.length !== 1) {
+    fail(`${E.bosses.length} bosses alive after ${CFG.BOSS_INTERVAL + 20}s — a level must own exactly one`);
+  }
+  if (E.bosses.length) E.bosses[0].hp = bossHp;
+  console.log(`   one boss per level holds across ${CFG.BOSS_INTERVAL + 20}s`);
+  // That hold let the horde rebuild or thin out; top it back up before the
+  // sweep so there is genuinely something on the field to scatter.
+  until(() => E.trashAlive > 25, 60);
+
+  // Kill it, and watch what the sweep does.
+  const trashBefore = E.trashAlive;
+  if (trashBefore === 0) fail('no trash on the field when the boss died — the sweep proves nothing');
+  let paidOut = 0;
+  const origOnKill = game.onEnemyKilled.bind(game);
+  game.onEnemyKilled = (e) => { paidOut++; return origOnKill(e); };
+  const kills0 = E.totalKills;
+  const parts0 = game.player.parts_collected;
+
+  E.kill(E.bosses[0]);
+  if (!game.levelPhase) fail('killing the boss did not start the level clear');
+
+  // Through the sweep, then the breather.
+  if (!until(() => game.levelPhase !== 'clearing', 30)) fail('the sweep never finished');
+  const swept = game.levelSwept;
+  if (E.trashAlive !== 0) fail(`${E.trashAlive} monsters survived the sweep`);
+  if (!until(() => game.levelPhase === null, 30)) fail('the interlude never ended');
+  game.onEnemyKilled = origOnKill;
+
+  if (paidOut !== 0) {
+    fail(`${paidOut} swept monsters paid out through onEnemyKilled — they must drop nothing`);
+  }
+  // kill() counts the boss itself; nothing else may be added by the sweep.
+  if (E.totalKills !== kills0 + 1) {
+    fail(`the sweep added ${E.totalKills - kills0 - 1} kills to the tally; only the boss should count`);
+  }
+  // The requirement is that the field ends empty and none of it paid out, not
+  // that the shockwave personally took every one: weapons are still swinging
+  // during the clear and legitimately account for some. Both mechanisms are
+  // covered — trashAlive === 0 above, and the payout checks below.
+  if (swept === 0 && trashBefore > 0) {
+    fail(`the sweep vaporised nothing though ${trashBefore} monsters were standing`);
+  }
+  if (game.player.parts_collected <= parts0) {
+    fail('the boss hoard did not pay out — clearing the level should still reward the kill');
+  }
+  console.log(`   boss died, field of ${trashBefore} cleared to 0 for 0 parts and 0 kills `
+    + `(${swept} vaporised by the sweep)`);
+
+  // Level advanced, and the horde comes back.
+  if (game.level !== 2) fail(`level is ${game.level} after the first clear, expected 2`);
+  if (E.spawnPaused) fail('spawning is still paused after the next level began');
+  if (!until(() => E.trashAlive > 5, 30)) fail('monsters did not respawn on level 2');
+  console.log(`   level 2 began and the horde returned (${E.trashAlive} alive)`);
+
+  // The next boss is on a fresh clock, not the old absolute one.
+  if (!Number.isFinite(E.bossTimer) || E.bossTimer > CFG.BOSS_INTERVAL) {
+    fail(`level 2's boss clock is ${E.bossTimer}, expected a fresh ${CFG.BOSS_INTERVAL}s countdown`);
+  }
+
+  // And it repeats: drive two more levels the same way.
+  for (let want = 3; want <= 4; want++) {
+    until(() => E.trashAlive > 15, 40);
+    E.bossTimer = 0;
+    if (!until(() => E.bosses.length > 0, 12)) { fail(`level ${want - 1} never spawned its boss`); break; }
+    E.kill(E.bosses[0]);
+    if (!until(() => game.levelPhase === null, 30)) { fail(`level ${want - 1} never finished clearing`); break; }
+    if (game.level !== want) { fail(`expected level ${want}, got ${game.level}`); break; }
+  }
+  console.log(`   levels chain: reached level ${game.level} through ${game.bossesKilled} bosses`);
+
+  // The hunter cannot be killed during his own victory lap.
+  until(() => E.trashAlive > 10, 40);
+  E.bossTimer = 0;
+  if (!until(() => E.bosses.length > 0, 12)) fail('no boss to test invulnerability against');
+  if (E.bosses.length) E.kill(E.bosses[0]);
+  const hpAtClear = game.player.stats.hp;
+  until(() => game.levelPhase === null, 30);
+  if (game.player.stats.hp < hpAtClear) fail('the hunter took damage during the level clear');
+  if (!game.player.alive) fail('the hunter died during the level clear');
+
+  // A fresh run is back on level 1 with nothing left over.
+  game.restart();
+  if (game.level !== 1 || game.levelPhase !== null || game.enemies.spawnPaused) {
+    fail(`restart left level state behind: level=${game.level} phase=${game.levelPhase} paused=${game.enemies.spawnPaused}`);
+  }
+}
+
 // --- Report ------------------------------------------------------------------
 console.log(`\nframes simulated: ${steps}  renders: ${game.renderer.renders}  level-ups taken: ${picks}`);
 if (warnings.length) {
