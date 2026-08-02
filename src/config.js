@@ -30,6 +30,7 @@ export const CFG = {
     player: 2.0,     // the hunter reads as the hero of the frame
     monster: 1.35,   // trash mobs; bosses are already large and stay as-is
     reach: 1.35,     // melee arcs and auras, so they still look like they connect
+    hound: 1.9,      // the Spirit Hound read as a puppy beside a 4-unit hunter
   },
 
   // ---- player --------------------------------------------------------------
@@ -107,7 +108,17 @@ export const CFG = {
   // count, which is a small integer and would round badly). Monster part values
   // are raised by roughly the inverse in enemies.js, so thinning the horde does
   // not slow progression down.
-  DENSITY: 0.65,
+  DENSITY: 0.455,
+
+  // ---- horde mix -----------------------------------------------------------
+  // Fewer, tougher, worth more. Kept as separate knobs rather than baked into
+  // the eight monster definitions so the mix can be retuned in one place.
+  // partsMul is the inverse of the count cut, so thinning the horde changes how
+  // the fight *feels* without slowing progression down.
+  ENEMY: {
+    hpMul: 1.3,          // +30% health on trash mobs; bosses tune separately
+    partsMul: 1 / 0.7,   // +43% parts each, offsetting the 30% fewer of them
+  },
 
   // ---- spawning ------------------------------------------------------------
   SPAWN: {
@@ -117,7 +128,7 @@ export const CFG = {
     baseInterval: 1.5,        // seconds between spawn waves at t=0 (before DENSITY)
     minInterval: 0.16,       // floor, also divided by DENSITY
     baseCount: 2,
-    maxAlive: 220,
+    maxAlive: 154,            // the ceiling, cut alongside DENSITY
   },
 
   // ---- chests --------------------------------------------------------------

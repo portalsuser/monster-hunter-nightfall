@@ -321,7 +321,7 @@ export const PASSIVES = {
   alacrity: { name: 'Alacrity', icon: '⏱️', color: '#9fd0ff', maxLevel: 20, desc: 'All weapons come off cooldown faster.', step: '-3.5% cooldown' },
   swift: { name: 'Swiftshod', icon: '👢', color: '#a8ffb0', maxLevel: 20, desc: 'You move faster.', step: '+3.5% move speed' },
   ironhide: { name: 'Ironhide', icon: '🛡️', color: '#c8c8d0', maxLevel: 20, desc: 'Reduces every hit you take.', step: '+1.5 armor' },
-  vigor: { name: 'Vigor', icon: '❤️', color: '#ff6a8a', maxLevel: 20, desc: 'Raises maximum health and heals you now.', step: '+16 max HP' },
+  vigor: { name: 'Vigor', icon: '❤️', color: '#ff6a8a', maxLevel: 20, desc: 'Raises maximum health and restores you to full.', step: '+16 max HP, heals to full' },
   lodestone: { name: 'Lodestone', icon: '🧲', color: '#ffd23c', maxLevel: 20, desc: 'Draws monster parts in from further away.', step: '+12% pickup range' },
   sweep: { name: 'Wide Sweep', icon: '🌐', color: '#c8b0ff', maxLevel: 20, desc: 'Enlarges every area of effect.', step: '+5% area' },
   keen: { name: 'Keen Edge', icon: '🎯', color: '#ffb03c', maxLevel: 20, desc: 'Chance to land devastating critical strikes.', step: '+2.5% crit' },
@@ -507,6 +507,7 @@ export class WeaponSystem {
       tail.rotation.x = -Math.PI / 2.5;
       tail.position.set(0, 0.66, -0.5);
       g.add(body, head, tail);
+      g.scale.setScalar(CFG.SCALE.hound);
       g.visible = false;
       this.scene.add(g);
       this.hounds.push({ group: g, x: 0, z: 0, yaw: 0, cd: 0, active: false, target: null });
@@ -539,6 +540,10 @@ export class WeaponSystem {
       const lvl = Math.min(PASSIVES[key].maxLevel, (this.passives.get(key) || 0) + 1);
       this.passives.set(key, lvl);
       this._applyPassives();
+      // Vigor's card promises a heal. _applyPassives only tops you up by the
+      // maximum it just added — +16 HP on a 200 HP bar reads as nothing
+      // happening at all. Taking a rank of Vigor puts you back to full.
+      if (key === 'vigor') this.player.heal(this.player.stats.maxHp);
     }
   }
 
@@ -1251,8 +1256,18 @@ export class WeaponSystem {
       }
       h.group.visible = true;
 
+      const px = this.player.pos.x, pz = this.player.pos.z;
+      // A bigger hound has to bite from further out or its jaws close on air.
+      const bite = 1.1 * CFG.SCALE.hound;
+
+      // Reacquire from around the HUNTER, not from wherever the hound happens
+      // to be standing. Searching from the hound's own position could lock it
+      // onto something at the far edge of its own leash — which immediately
+      // tripped the leash below, cleared the target, and sent it home, only to
+      // reacquire the same monster next frame. That ping-pong on the boundary
+      // is what read as the hound getting stuck.
       if (!h.target || !h.target.alive) {
-        h.target = this.enemies.nearest(h.x, h.z, b.range);
+        h.target = this.enemies.nearest(px, pz, b.range * 0.8);
       }
 
       let tx, tz;
@@ -1261,25 +1276,37 @@ export class WeaponSystem {
       } else {
         // Heel: circle the player.
         const a = elapsed * 1.4 + (i / count) * TAU;
-        tx = this.player.pos.x + Math.cos(a) * 2.6;
-        tz = this.player.pos.z + Math.sin(a) * 2.6;
+        tx = px + Math.cos(a) * 2.6;
+        tz = pz + Math.sin(a) * 2.6;
       }
 
-      // Never stray too far from the hunter.
-      const leash = Math.hypot(h.x - this.player.pos.x, h.z - this.player.pos.z);
-      if (leash > b.range) { tx = this.player.pos.x; tz = this.player.pos.z; h.target = null; }
+      // Hysteresis: the leash breaks wider than targets are acquired, so a
+      // monster sitting exactly on the boundary cannot flip the state every
+      // frame.
+      const leash = Math.hypot(h.x - px, h.z - pz);
+      if (leash > b.range * 1.15) { tx = px; tz = pz; h.target = null; }
 
       const dx = tx - h.x, dz = tz - h.z;
-      const d = Math.hypot(dx, dz) || 1;
-      h.x += (dx / d) * speed * dt;
-      h.z += (dz / d) * speed * dt;
-      h.yaw = Math.atan2(dx, dz);
+      const d = Math.hypot(dx, dz);
 
-      h.group.position.set(h.x, Math.abs(Math.sin(elapsed * 12 + i)) * 0.09, h.z);
+      // Step toward the target, never past it, and stop at biting distance
+      // rather than burying itself in the monster. The old version moved a flat
+      // speed*dt every frame regardless of how close it already was, so on
+      // arrival it overshot, corrected, overshot again — a hound vibrating in
+      // place, which is the other half of what looked like getting stuck.
+      const standoff = h.target && h.target.alive ? bite * 0.6 : 0;
+      const step = Math.min(speed * dt, Math.max(0, d - standoff));
+      if (d > 1e-4 && step > 0) {
+        h.x += (dx / d) * step;
+        h.z += (dz / d) * step;
+        h.yaw = Math.atan2(dx, dz);   // hold the last heading when standing still
+      }
+
+      h.group.position.set(h.x, Math.abs(Math.sin(elapsed * 12 + i)) * 0.09 * CFG.SCALE.hound, h.z);
       h.group.rotation.y = h.yaw;
 
       h.cd -= dt;
-      if (h.target && h.target.alive && d < 1.1 && h.cd <= 0) {
+      if (h.target && h.target.alive && d < bite && h.cd <= 0) {
         h.cd = b.cd * this.player.stats.haste;
         this.hitEnemy(h.target, dmg, { knock: 3 });
         this.vfx.sparks(h.target.x, 0.8, h.target.z, 0x8affd8, 5);

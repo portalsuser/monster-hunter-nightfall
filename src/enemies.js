@@ -1153,12 +1153,12 @@ export class EnemyManager {
     e.x = x; e.z = z;
     e.y = def.flying ? 1.5 + Math.random() * 0.9 : 0;
     e.baseY = e.y;
-    e.maxHp = def.hp * d.hpMul;
+    e.maxHp = def.hp * d.hpMul * CFG.ENEMY.hpMul;
     e.hp = e.maxHp;
     e.speed = def.speed * d.speedMul * rand(0.92, 1.08);
     e.dmg = def.dmg * d.dmgMul;
     e.radius = def.radius * CFG.SCALE.monster;
-    e.xp = Math.max(1, Math.round(def.xp * d.xpMul));
+    e.xp = Math.max(1, Math.round(def.xp * d.xpMul * CFG.ENEMY.partsMul));
     e.scale = (scaleOverride || def.scale) * rand(0.92, 1.1) * CFG.SCALE.monster;
     e.phase = Math.random() * TAU;
     e.yaw = Math.random() * TAU;
