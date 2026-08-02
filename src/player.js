@@ -653,6 +653,7 @@ export class Player {
     this._atk = null;     // active swing, see attack()
 
     // Dodge roll, see dodge().
+    this.revivesUsed = 0; // Second Wind charges already spent this run
     this.dodgeTime = 0;   // seconds of travel remaining
     this.dodgeCd = 0;     // recovery lockout
     this._dodgeDir = new THREE.Vector3(0, 0, 1);
@@ -722,6 +723,10 @@ export class Player {
     this.hurtFlash = 1;
     if (this.stats.hp <= 0) {
       if (this.stats.revives > 0) {
+        // Counted, not just decremented: _applyPassives rebuilds `revives`
+        // from the Second Wind rank every time any passive is picked, so the
+        // spend has to be recorded somewhere it cannot recompute away.
+        this.revivesUsed = (this.revivesUsed || 0) + 1;
         this.stats.revives--;
         this.stats.hp = Math.round(this.stats.maxHp * 0.55);
         this.invuln = 2.5;

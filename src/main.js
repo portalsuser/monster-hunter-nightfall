@@ -222,6 +222,7 @@ class Game {
     this.player.hurtFlash = 0;
     this.player.dodgeTime = 0;
     this.player.dodgeCd = 0;
+    this.player.revivesUsed = 0;
     this.weapons._applyPassives();
     this.player.stats.hp = this.player.stats.maxHp;
     this.player.stats.stamina = this.player.stats.staminaMax;

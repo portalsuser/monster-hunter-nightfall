@@ -327,7 +327,7 @@ export const PASSIVES = {
   keen: { name: 'Keen Edge', icon: '🎯', color: '#ffb03c', maxLevel: 20, desc: 'Chance to land devastating critical strikes.', step: '+2.5% crit' },
   bloodhound: { name: 'Bloodhound', icon: '🩸', color: '#ff4a6a', maxLevel: 20, desc: 'Monster parts are worth more.', step: '+7% monster parts' },
   mending: { name: 'Slow Mending', icon: '✚', color: '#8affb0', maxLevel: 20, desc: 'Regenerate health over time.', step: '+0.35 HP/sec' },
-  secondwind: { name: 'Second Wind', icon: '🕯️', color: '#ffe9a8', maxLevel: 20, desc: 'Survive a fatal blow, restoring half your health.', step: '+1 revive every 4 ranks' },
+  secondwind: { name: 'Second Wind', icon: '🕯️', color: '#ffe9a8', maxLevel: 20, desc: 'Cheat death once, rising with half your health.', step: 'Rank 1 grants a revive, then +1 every 4 ranks' },
   // The odd one out: five ranks instead of twenty, and `rare` makes the card
   // pool cull it most of the time. Each rank is worth roughly a whole extra
   // dodge, so it would dominate every screen it appeared on.
@@ -563,7 +563,16 @@ export class WeaponSystem {
     s.crit = 0.03 + L('keen') * 0.025;
     s.greed = 1 + L('bloodhound') * 0.07;
     s.regen = L('mending') * 0.35;
-    s.revives = Math.floor(L('secondwind') / 4);
+    // Rank 1 has to grant a revive. `floor(L/4)` gave zero until rank 4, so
+    // taking a card that says "survive a fatal blow" bought you nothing at all
+    // and you simply died — which is exactly what it looks like from the seat.
+    //
+    // Subtracting what has already been spent matters just as much: this method
+    // recomputes from scratch on every passive pick, so without it, using a
+    // revive and then taking any passive rank handed it straight back.
+    const sw = L('secondwind');
+    const granted = sw >= 1 ? 1 + Math.floor((sw - 1) / 4) : 0;
+    s.revives = Math.max(0, granted - (this.player.revivesUsed || 0));
 
     // Stamina. Taking a rank hands you the new capacity immediately, the same
     // way Vigor heals you for the health it just granted.
