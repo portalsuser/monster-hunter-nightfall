@@ -48,6 +48,12 @@ M                              mute
 Difficulty scales continuously with elapsed time: monster health, damage, speed
 and spawn density all climb, and new monster types unlock on a schedule.
 
+The horde is deliberately thin: **30% fewer monsters**, each with **30% more
+health** and worth **43% more parts**. The parts multiplier is the inverse of
+the count cut, so a quieter screen costs you nothing in progression — you earn
+the same parts per minute, from fewer and meatier fights. All three knobs live
+in `CFG.DENSITY` and `CFG.ENEMY`.
+
 ## Weapons
 
 | | Weapon | What it does |
