@@ -41,12 +41,50 @@ export class VFX {
 
   /** Standard hit dressing: sparks, a light pop, optional shock ring. */
   impact(x, y, z, opts = {}) {
-    const { color = 0xffe9b0, n = 5, speed = 7, ring = 0, power = 0.8, size = 0.7 } = opts;
+    const { color = 0xffe9b0, n = 5, speed = 7, ring = 0, power = 0.8, size = 0.7, aim = null } = opts;
     this.spawnParticles(x, y, z, n, {
       color, speed, life: 0.3, size, up: 2.6, grav: -16, drag: 0.05,
     });
+    // A spray thrown along the direction of the blow, on top of the radial
+    // burst. Sparks that all fly outward evenly read as an explosion; sparks
+    // that follow the strike read as something being hit by something.
+    if (aim !== null) this.sparkCone(x, y, z, aim, { color, n: Math.max(3, n >> 1), speed: speed * 1.5 });
     this.flash(x, y, z, color, power);
-    if (ring > 0) this.ring(x, z, 0.3, ring, color, 0.3, Math.max(0.15, y * 0.5));
+    if (ring > 0) {
+      this.ring(x, z, 0.3, ring, color, 0.3, Math.max(0.15, y * 0.5));
+      // A second, faster, thinner ring just inside it — one ring reads as a
+      // decal, two reads as a shockwave.
+      this.ring(x, z, 0.15, ring * 0.62, 0xffffff, 0.18, Math.max(0.16, y * 0.5 + 0.02));
+    }
+  }
+
+  /**
+   * Particles thrown in a cone along `angle` rather than evenly in a circle.
+   * Used for the debris a strike knocks off whatever it landed on.
+   */
+  sparkCone(x, y, z, angle, opts = {}) {
+    const { color = 0xffe9b0, n = 6, speed = 9, spread = 0.7, life = 0.28, size = 0.55 } = opts;
+    this._pColor.set(color);
+    let made = 0;
+    for (let i = 0; i < this.particles.length && made < n; i++) {
+      const p = this.particles[i];
+      if (p.alive) continue;
+      const a = angle + (Math.random() - 0.5) * spread * 2;
+      const sp = speed * (0.5 + Math.random() * 0.9);
+      p.alive = true;
+      p.x = x; p.y = y; p.z = z;
+      p.vx = Math.sin(a) * sp;
+      p.vz = Math.cos(a) * sp;
+      p.vy = 1.2 + Math.random() * 2.4;
+      p.life = p.maxLife = life * (0.7 + Math.random() * 0.7);
+      p.size = size * (0.6 + Math.random() * 0.8);
+      p.spin = rand(-14, 14);
+      p.rot = Math.random() * TAU;
+      p.grav = -22;
+      p.drag = 0.04;
+      p.r = this._pColor.r; p.g = this._pColor.g; p.b = this._pColor.b;
+      made++;
+    }
   }
 
   // -------------------------------------------------------------------------

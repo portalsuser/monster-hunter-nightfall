@@ -616,6 +616,8 @@ export class WeaponSystem {
   }
 
   hitEnemy(e, base, opts = {}) {
+    // `aim` reaches vfx.impact so debris flies along the strike, not just away
+    // from the point of contact.
     if (!e || !e.alive) return;
     const { dmg, crit } = this._roll(base);
     // Frost Vial rank 5: frozen targets take double damage.
@@ -795,6 +797,26 @@ export class WeaponSystem {
     return null;
   }
 
+  /**
+   * A melee arc built from layers rather than one ring.
+   *
+   * A single band reads as a decal stuck to the ground. Three concentric arcs
+   * at different radii, widths and brightnesses — plus a fan of sparks thrown
+   * along the swing — read as a blade passing through air, because the eye
+   * gets both the leading edge and the trail behind it.
+   */
+  slashArc(x, z, angle, radius, arc, core, edge, sweep = 0) {
+    this.spawnSlash(x, z, angle, radius * 1.06, arc, edge, sweep);        // outer glow
+    this.spawnSlash(x, z, angle, radius * 0.86, arc, core, sweep);        // bright core
+    this.spawnSlash(x, z, angle, radius * 0.58, arc, edge, sweep * 0.8);  // inner trail
+    // Embers streaming off the tip, thrown along the arc.
+    const tip = angle + sweep * 0.35;
+    this.vfx.sparkCone(
+      x + Math.sin(tip) * radius * 0.8, 1.0, z + Math.cos(tip) * radius * 0.8,
+      tip + Math.PI / 2, { color: core, n: 5, speed: 7, spread: 0.5, life: 0.24, size: 0.5 }
+    );
+  }
+
   spawnBolt(x, z) {
     for (const b of this.bolts) {
       if (b.life > 0) continue;
@@ -856,8 +878,7 @@ export class WeaponSystem {
         p.attack('punch');
         SFX.punch();
         const fx = Math.sin(aim), fz = Math.cos(aim);
-        this.spawnSlash(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.95, arc, 0xffd9a0, arc * 0.8);
-        this.spawnSlash(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.62, arc, 0xfff4dc, arc * 0.8);
+        this.slashArc(p.pos.x + fx * 0.5, p.pos.z + fz * 0.5, aim, range * 0.95, arc, 0xfff4dc, 0xffb867, arc * 0.8);
         // Speed lines streaking along the arc.
         for (let i = 0; i < 5; i++) {
           const sa = aim + (i / 4 - 0.5) * arc;
@@ -925,8 +946,7 @@ export class WeaponSystem {
           const a = aim + (arc >= Math.PI * 2 ? 0 : side * 0.35);
           if (arc < Math.PI * 2) p.faceAttack(a);
           p.attack('slash');
-          this.spawnSlash(p.pos.x, p.pos.z, a, range * 1.05, arc, 0xbcd4ff, arc * 0.85);
-          this.spawnSlash(p.pos.x, p.pos.z, a, range * 0.7, arc, 0xffffff, arc * 0.85);
+          this.slashArc(p.pos.x, p.pos.z, a, range * 1.05, arc, 0xffffff, 0x9fc4ff, arc * 0.85);
           for (let i = 0; i < 8; i++) {
             const sa = a + (i / 7 - 0.5) * arc;
             this.vfx.spawnParticles(
