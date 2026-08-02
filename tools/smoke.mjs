@@ -1114,6 +1114,70 @@ console.log('▶ phase 13 — level rosters, ramps and chest supply');
   game.restart();
 }
 
+// --- Phase 14: Second Wind ----------------------------------------------------
+console.log('▶ phase 14 — Second Wind');
+{
+  const P = game.player, W = game.weapons;
+
+  // Rank 1 has to actually save you. It used to grant floor(1/4) = 0 revives,
+  // so the card promised you would survive a fatal blow and then you died.
+  game.restart();
+  game.state = 'playing';
+  W.addOrLevel('secondwind');
+  if (P.stats.revives < 1) fail(`Second Wind rank 1 granted ${P.stats.revives} revives`);
+  P.stats.hp = 10;
+  P.invuln = 0;
+  P.damage(9999);
+  if (!P.alive) fail('Second Wind rank 1 did not save the hunter from a fatal blow');
+  if (P.stats.hp <= 0) fail(`revived on ${P.stats.hp} health`);
+  console.log(`   rank 1 survives a fatal blow, rising on ${Math.round(P.stats.hp)} HP`);
+
+  // ...and once spent, it must stay spent. _applyPassives rebuilds `revives`
+  // from the rank on every passive pick, so this used to hand the charge back.
+  if (P.stats.revives !== 0) fail(`revive was not consumed (${P.stats.revives} left)`);
+  W.addOrLevel('might');
+  if (P.stats.revives !== 0) {
+    fail(`taking an unrelated passive refunded the spent revive (${P.stats.revives})`);
+  }
+  P.invuln = 0;
+  P.damage(9999);
+  if (P.alive) fail('the hunter survived a second fatal blow on one charge of Second Wind');
+  console.log('   a spent charge stays spent across later passive picks');
+
+  // More ranks mean more charges, and they stack in the advertised direction.
+  game.restart();
+  game.state = 'playing';
+  const seen = [];
+  for (let r = 1; r <= PASSIVES.secondwind.maxLevel; r++) {
+    W.addOrLevel('secondwind');
+    seen.push(P.stats.revives);
+  }
+  if (seen[0] !== 1) fail(`rank 1 gives ${seen[0]} revives, expected 1`);
+  for (let i = 1; i < seen.length; i++) {
+    if (seen[i] < seen[i - 1]) fail(`revives went down from rank ${i} to ${i + 1}`);
+  }
+  if (seen[seen.length - 1] <= 1) fail(`maxed Second Wind still only grants ${seen[seen.length - 1]} revive`);
+  console.log(`   ranks 1 -> ${seen.length} grant ${seen[0]} -> ${seen[seen.length - 1]} charges`);
+
+  // Every charge has to be usable, including against an explosion rather than
+  // a melee hit, since that damage arrives down a different path.
+  game.restart();
+  game.state = 'playing';
+  for (let r = 0; r < 9; r++) W.addOrLevel('secondwind');
+  const charges = P.stats.revives;
+  for (let i = 0; i < charges; i++) {
+    P.invuln = 0;
+    game.explosionHitsPlayer(P.pos.x, P.pos.z, 5, 9999);
+    if (!P.alive) fail(`died on charge ${i + 1} of ${charges} — explosions bypass Second Wind`);
+  }
+  P.invuln = 0;
+  game.explosionHitsPlayer(P.pos.x, P.pos.z, 5, 9999);
+  if (P.alive) fail(`survived ${charges + 1} fatal blows on ${charges} charges`);
+  console.log(`   all ${charges} charges spend correctly, explosions included`);
+  game.restart();
+  if (game.player.revivesUsed !== 0) fail('restart did not clear spent revives');
+}
+
 // --- Report ------------------------------------------------------------------
 console.log(`\nframes simulated: ${steps}  renders: ${game.renderer.renders}  level-ups taken: ${picks}`);
 if (warnings.length) {
