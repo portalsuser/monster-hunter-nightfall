@@ -582,6 +582,26 @@ export class WeaponSystem {
   static rankDamage(level) { return 1 + Math.max(0, level - 5) * 0.11; }
   static rankCooldown(level) { return Math.max(0.55, 1 - Math.max(0, level - 5) * 0.028); }
 
+  /**
+   * Reads a per-rank milestone table safely.
+   *
+   * Every one of these tables is five entries long because ranks 1-5 are the
+   * hand-authored ones — but maxLevel is 20. Indexing raw returned `undefined`
+   * past rank 5, and `for (let i = 0; i < undefined; i++)` never runs even
+   * once: the Storm Sigil, Throwing Knives, Silver Cross, Holy Water and
+   * Whetstone Fangs all went completely silent the moment you ranked them to 6,
+   * while still burning their cooldown. Bear Traps failed the opposite way —
+   * `live >= undefined` is false, so the cap came off and they spawned to the
+   * pool limit.
+   *
+   * Clamping holds the rank-5 shape from there on, which is the intent: past 5
+   * a weapon grows through rankDamage and rankCooldown, not by sprouting more
+   * projectiles forever.
+   */
+  static rankPick(table, level) {
+    return table[Math.min(Math.max(1, level | 0), table.length) - 1];
+  }
+
   _roll(base) {
     const s = this.player.stats;
     let dmg = base * s.might * (this._rankMul || 1);
@@ -869,7 +889,7 @@ export class WeaponSystem {
 
       // --------------------------------------------------------------- knives
       case 'knives': {
-        const count = [1, 2, 2, 3, 5][lvl - 1] + s.projectiles;
+        const count = WeaponSystem.rankPick([1, 2, 2, 3, 5], lvl) + s.projectiles;
         const pierce = b.pierce + (lvl >= 3 ? 1 : 0) + (lvl >= 5 ? 2 : 0);
         const dmg = b.dmg * (lvl >= 3 ? 1.25 : 1);
         const spread = count > 1 ? 0.34 : 0;
@@ -923,7 +943,7 @@ export class WeaponSystem {
 
       // ---------------------------------------------------------------- cross
       case 'cross': {
-        const count = [1, 2, 2, 3, 3][lvl - 1] + s.projectiles;
+        const count = WeaponSystem.rankPick([1, 2, 2, 3, 3], lvl) + s.projectiles;
         const dmg = b.dmg * (lvl >= 3 ? 1.3 : 1);
         const range = b.range * (lvl >= 3 ? 1.3 : 1) * s.area;
         SFX.holy();
@@ -942,7 +962,7 @@ export class WeaponSystem {
 
       // ----------------------------------------------------------- holy water
       case 'holywater': {
-        const count = [1, 2, 2, 3, 3][lvl - 1] + s.projectiles;
+        const count = WeaponSystem.rankPick([1, 2, 2, 3, 3], lvl) + s.projectiles;
         const dmg = b.dmg * (lvl >= 4 ? 1.35 : 1);
         const radius = b.radius * s.area * (lvl >= 5 ? 1.7 : 1);
         const dur = b.duration * s.duration * (lvl >= 3 ? 1.5 : 1);
@@ -1005,7 +1025,7 @@ export class WeaponSystem {
 
       // ---------------------------------------------------------------- sigil
       case 'sigil': {
-        const count = [1, 2, 2, 3, 5][lvl - 1];
+        const count = WeaponSystem.rankPick([1, 2, 2, 3, 5], lvl);
         const dmg = b.dmg * (lvl >= 3 ? 1.4 : 1);
         const near = this.enemies.queryNear(p.pos.x, p.pos.z, b.range * s.area, scratch).filter((e) => e.alive);
         if (!near.length) return 0.4;
@@ -1023,7 +1043,7 @@ export class WeaponSystem {
 
       // ---------------------------------------------------------------- traps
       case 'traps': {
-        const maxTraps = [1, 2, 2, 3, 3][lvl - 1];
+        const maxTraps = WeaponSystem.rankPick([1, 2, 2, 3, 3], lvl);
         const live = this.traps.filter((t) => t.alive).length;
         if (live >= maxTraps) return 0.5;
         const slot = this.traps.find((t) => !t.alive);
@@ -1090,7 +1110,7 @@ export class WeaponSystem {
     const b = w.def.base;
     const lvl = w.level;
     const s = this.player.stats;
-    const count = [2, 3, 4, 5, 7][lvl - 1] + s.projectiles;
+    const count = WeaponSystem.rankPick([2, 3, 4, 5, 7], lvl) + s.projectiles;
     const radius = b.radius * s.area * (lvl >= 4 ? 1.25 : 1);
     const spin = b.speed * (lvl >= 5 ? 2.0 : 1);
     const dmg = b.dmg * (lvl >= 3 ? 1.25 : 1);
