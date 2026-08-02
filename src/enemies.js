@@ -16,7 +16,7 @@ import { clamp, pick, rand, randInt, ringPoint, ringPointBiased, TAU, weighted, 
  */
 
 const stdMat = (color, opts = {}) =>
-  new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true, ...opts });
+  new THREE.MeshStandardMaterial({ color, roughness: 0.8, flatShading: false, ...opts });
 
 // ---------------------------------------------------------------------------
 // Trash mob type definitions
@@ -30,12 +30,12 @@ function makeTypes() {
   // --- Rotfeeder: the bread-and-butter swarm unit --------------------------
   types.grub = {
     name: 'Rotfeeder',
-    hp: 9, speed: 2.7, dmg: 6, radius: 0.52, xp: 1, scale: 1,
+    hp: 9, speed: 2.7, dmg: 6, radius: 0.52, xp: 2, scale: 1,
     tint: 0x6a7f4a, blood: 0x4d6b2a,
     minute: 0,
     parts: [
       {
-        geo: () => new THREE.IcosahedronGeometry(0.42, 0),
+        geo: () => new THREE.IcosahedronGeometry(0.42, 2),
         mat: () => stdMat(0x5c7040),
         place: (d, e, t) => {
           const squash = 1 + Math.sin(t * 9 + e.phase) * 0.16;
@@ -45,7 +45,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => new THREE.SphereGeometry(0.15, 6, 5),
+        geo: () => new THREE.SphereGeometry(0.15, 12, 9),
         mat: () => new THREE.MeshBasicMaterial({ color: 0xd6ff5c }),
         place: (d, e, t) => {
           d.position.set(e.x + Math.sin(e.yaw) * 0.3, 0.5, e.z + Math.cos(e.yaw) * 0.3);
@@ -59,12 +59,12 @@ function makeTypes() {
   // --- Gloomwolf: fast flanker --------------------------------------------
   types.wolf = {
     name: 'Gloomwolf',
-    hp: 20, speed: 5.5, dmg: 10, radius: 0.6, xp: 2, scale: 1,
+    hp: 20, speed: 5.5, dmg: 10, radius: 0.6, xp: 3, scale: 1,
     tint: 0x3a3a44, blood: 0x6b1f2a,
     minute: 0.6,
     parts: [
       {
-        geo: () => { const g = new THREE.CapsuleGeometry(0.28, 0.62, 4, 7); g.rotateX(Math.PI / 2); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.28, 0.62, 8, 16); g.rotateX(Math.PI / 2); return g; },
         mat: () => stdMat(0x33333d),
         place: (d, e, t) => {
           d.position.set(e.x, 0.66 + Math.sin(t * 12 + e.phase) * 0.05, e.z);
@@ -73,7 +73,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => { const g = new THREE.ConeGeometry(0.24, 0.5, 6); g.rotateX(Math.PI / 2); return g; },
+        geo: () => { const g = new THREE.ConeGeometry(0.24, 0.5, 14); g.rotateX(Math.PI / 2); return g; },
         mat: () => stdMat(0x2a2a33),
         place: (d, e, t) => {
           d.position.set(e.x + Math.sin(e.yaw) * 0.6, 0.72, e.z + Math.cos(e.yaw) * 0.6);
@@ -82,7 +82,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => new THREE.SphereGeometry(0.06, 5, 4),
+        geo: () => new THREE.SphereGeometry(0.06, 10, 8),
         mat: () => new THREE.MeshBasicMaterial({ color: 0xff5a3c }),
         place: (d, e) => {
           d.position.set(e.x + Math.sin(e.yaw) * 0.78, 0.78, e.z + Math.cos(e.yaw) * 0.78);
@@ -107,12 +107,12 @@ function makeTypes() {
   // --- Nightwing: erratic flyer, ignores ground -----------------------------
   types.bat = {
     name: 'Nightwing',
-    hp: 12, speed: 5.9, dmg: 7, radius: 0.42, xp: 2, scale: 1,
+    hp: 12, speed: 5.9, dmg: 7, radius: 0.42, xp: 3, scale: 1,
     tint: 0x2b2233, blood: 0x4a2244,
     minute: 1.4, flying: true, weave: 3.2,
     parts: [
       {
-        geo: () => new THREE.IcosahedronGeometry(0.24, 0),
+        geo: () => new THREE.IcosahedronGeometry(0.24, 2),
         mat: () => stdMat(0x2e2438),
         place: (d, e, t) => {
           d.position.set(e.x, e.y, e.z);
@@ -121,7 +121,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => { const g = new THREE.PlaneGeometry(0.62, 0.34); g.translate(0.31, 0, 0); return g; },
+        geo: () => { const g = new THREE.PlaneGeometry(0.62, 0.34, 6, 4); g.translate(0.31, 0, 0); return g; },
         mat: () => stdMat(0x40304d, { side: THREE.DoubleSide }),
         place: (d, e, t) => {
           d.position.set(e.x, e.y, e.z);
@@ -130,7 +130,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => { const g = new THREE.PlaneGeometry(0.62, 0.34); g.translate(-0.31, 0, 0); return g; },
+        geo: () => { const g = new THREE.PlaneGeometry(0.62, 0.34, 6, 4); g.translate(-0.31, 0, 0); return g; },
         mat: () => stdMat(0x40304d, { side: THREE.DoubleSide }),
         place: (d, e, t) => {
           d.position.set(e.x, e.y, e.z);
@@ -144,12 +144,12 @@ function makeTypes() {
   // --- Widow: skittering spider, spawns in clusters -------------------------
   types.spider = {
     name: 'Widow',
-    hp: 16, speed: 4.8, dmg: 9, radius: 0.5, xp: 2, scale: 1,
+    hp: 16, speed: 4.8, dmg: 9, radius: 0.5, xp: 3, scale: 1,
     tint: 0x1f1a24, blood: 0x2f4a1f,
     minute: 2.2, cluster: [3, 6],
     parts: [
       {
-        geo: () => new THREE.SphereGeometry(0.32, 7, 6),
+        geo: () => new THREE.SphereGeometry(0.32, 16, 12),
         mat: () => stdMat(0x241d2b),
         place: (d, e, t) => {
           d.position.set(e.x, 0.42 + Math.abs(Math.sin(t * 16 + e.phase)) * 0.07, e.z);
@@ -158,7 +158,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => { const g = new THREE.TorusGeometry(0.42, 0.045, 4, 10, Math.PI); g.rotateX(Math.PI / 2); return g; },
+        geo: () => { const g = new THREE.TorusGeometry(0.42, 0.05, 8, 20, Math.PI); g.rotateX(Math.PI / 2); return g; },
         mat: () => stdMat(0x161119),
         place: (d, e, t) => {
           d.position.set(e.x, 0.3, e.z);
@@ -167,7 +167,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => { const g = new THREE.TorusGeometry(0.42, 0.045, 4, 10, Math.PI); g.rotateX(Math.PI / 2); return g; },
+        geo: () => { const g = new THREE.TorusGeometry(0.42, 0.05, 8, 20, Math.PI); g.rotateX(Math.PI / 2); return g; },
         mat: () => stdMat(0x161119),
         place: (d, e, t) => {
           d.position.set(e.x, 0.3, e.z);
@@ -176,7 +176,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => new THREE.SphereGeometry(0.05, 5, 4),
+        geo: () => new THREE.SphereGeometry(0.05, 10, 8),
         mat: () => new THREE.MeshBasicMaterial({ color: 0xff2d5e }),
         place: (d, e) => {
           d.position.set(e.x + Math.sin(e.yaw) * 0.3, 0.5, e.z + Math.cos(e.yaw) * 0.3);
@@ -190,12 +190,12 @@ function makeTypes() {
   // --- Bonegnasher: slow, tanky, hits hard ---------------------------------
   types.brute = {
     name: 'Bonegnasher',
-    hp: 70, speed: 2.4, dmg: 20, radius: 0.95, xp: 6, scale: 1.5,
+    hp: 70, speed: 2.4, dmg: 20, radius: 0.95, xp: 9, scale: 1.5,
     tint: 0x6b5a45, blood: 0x8a2b2b,
     minute: 3,
     parts: [
       {
-        geo: () => new THREE.CapsuleGeometry(0.5, 0.7, 4, 8),
+        geo: () => new THREE.CapsuleGeometry(0.5, 0.7, 8, 18),
         mat: () => stdMat(0x5d4d3a),
         place: (d, e, t) => {
           d.position.set(e.x, 0.95 * e.scale, e.z);
@@ -204,7 +204,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => new THREE.DodecahedronGeometry(0.36, 0),
+        geo: () => new THREE.DodecahedronGeometry(0.36, 1),
         mat: () => stdMat(0xa89275),
         place: (d, e, t) => {
           d.position.set(e.x, 1.72 * e.scale, e.z);
@@ -213,7 +213,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => { const g = new THREE.CapsuleGeometry(0.16, 0.72, 3, 6); g.translate(0, -0.4, 0); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.16, 0.72, 6, 14); g.translate(0, -0.4, 0); return g; },
         mat: () => stdMat(0x4a3c2c),
         place: (d, e, t) => {
           const sw = Math.sin(t * 4 + e.phase) * 0.6;
@@ -223,7 +223,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => { const g = new THREE.CapsuleGeometry(0.16, 0.72, 3, 6); g.translate(0, -0.4, 0); return g; },
+        geo: () => { const g = new THREE.CapsuleGeometry(0.16, 0.72, 6, 14); g.translate(0, -0.4, 0); return g; },
         mat: () => stdMat(0x4a3c2c),
         place: (d, e, t) => {
           const sw = -Math.sin(t * 4 + e.phase) * 0.6;
@@ -238,12 +238,12 @@ function makeTypes() {
   // --- Corpse Light: ranged floater ---------------------------------------
   types.wisp = {
     name: 'Corpse Light',
-    hp: 22, speed: 2.8, dmg: 10, radius: 0.5, xp: 4, scale: 1,
+    hp: 22, speed: 2.8, dmg: 10, radius: 0.5, xp: 6, scale: 1,
     tint: 0x5ad6ff, blood: 0x7fe8ff,
     minute: 4, flying: true, ranged: { range: 12, cooldown: 2.6, speed: 8.5, dmg: 9 },
     parts: [
       {
-        geo: () => new THREE.IcosahedronGeometry(0.34, 1),
+        geo: () => new THREE.IcosahedronGeometry(0.34, 2),
         mat: () => new THREE.MeshBasicMaterial({ color: 0x63d9ff, transparent: true, opacity: 0.72 }),
         place: (d, e, t) => {
           d.position.set(e.x, e.y, e.z);
@@ -252,7 +252,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => new THREE.SphereGeometry(0.5, 8, 6),
+        geo: () => new THREE.SphereGeometry(0.5, 14, 10),
         mat: () => new THREE.MeshBasicMaterial({ color: 0x1d5f80, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false }),
         place: (d, e, t) => {
           d.position.set(e.x, e.y, e.z);
@@ -266,12 +266,12 @@ function makeTypes() {
   // --- Revenant: mid-game all-rounder --------------------------------------
   types.revenant = {
     name: 'Revenant',
-    hp: 46, speed: 4.3, dmg: 15, radius: 0.6, xp: 5, scale: 1.05,
+    hp: 46, speed: 4.3, dmg: 15, radius: 0.6, xp: 8, scale: 1.05,
     tint: 0x4a4f5e, blood: 0x3a2a4a,
     minute: 5,
     parts: [
       {
-        geo: () => new THREE.ConeGeometry(0.42, 1.5, 7, 2, true),
+        geo: () => new THREE.ConeGeometry(0.42, 1.5, 16, 4, true),
         mat: () => stdMat(0x3d4250, { side: THREE.DoubleSide, transparent: true, opacity: 0.92 }),
         place: (d, e, t) => {
           d.position.set(e.x, 0.78, e.z);
@@ -280,7 +280,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => new THREE.SphereGeometry(0.26, 8, 6),
+        geo: () => new THREE.SphereGeometry(0.26, 16, 12),
         mat: () => stdMat(0xb9b2a0),
         place: (d, e, t) => {
           d.position.set(e.x, 1.62 + Math.sin(t * 4 + e.phase) * 0.05, e.z);
@@ -289,7 +289,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => new THREE.SphereGeometry(0.055, 5, 4),
+        geo: () => new THREE.SphereGeometry(0.055, 10, 8),
         mat: () => new THREE.MeshBasicMaterial({ color: 0x8affd8 }),
         place: (d, e) => {
           d.position.set(e.x + Math.sin(e.yaw) * 0.22, 1.66, e.z + Math.cos(e.yaw) * 0.22);
@@ -303,12 +303,12 @@ function makeTypes() {
   // --- Shrieker: detonates on death ----------------------------------------
   types.shrieker = {
     name: 'Shrieker',
-    hp: 30, speed: 5.0, dmg: 12, radius: 0.62, xp: 4, scale: 1.1,
+    hp: 30, speed: 5.0, dmg: 12, radius: 0.62, xp: 6, scale: 1.1,
     tint: 0xa33f2a, blood: 0xff8a3c,
     minute: 6, explodes: { radius: 3.4, dmg: 26 },
     parts: [
       {
-        geo: () => new THREE.SphereGeometry(0.48, 8, 6),
+        geo: () => new THREE.SphereGeometry(0.48, 16, 12),
         mat: () => stdMat(0x8f3626, { emissive: 0x431208 }),
         place: (d, e, t) => {
           const pulse = 1 + Math.sin(t * 8 + e.phase) * 0.11;
@@ -318,7 +318,7 @@ function makeTypes() {
         },
       },
       {
-        geo: () => new THREE.TorusGeometry(0.5, 0.07, 5, 12),
+        geo: () => new THREE.TorusGeometry(0.5, 0.07, 10, 24),
         mat: () => new THREE.MeshBasicMaterial({ color: 0xff7b3c }),
         place: (d, e, t) => {
           d.position.set(e.x, 0.55, e.z);
@@ -342,28 +342,28 @@ const BOSS_DEFS = [
   {
     key: 'treant',
     name: 'Elder Treant',
-    hp: 1500, speed: 4.0, dmg: 30, radius: 2.4, xp: 120, blood: 0x3f6b2a,
+    hp: 1500, speed: 4.0, dmg: 30, radius: 2.4, xp: 185, blood: 0x3f6b2a,
     build: bossTreant,
     ability: 'slam',
   },
   {
     key: 'wyrm',
     name: 'Blight Wyrm',
-    hp: 2100, speed: 4.6, dmg: 34, radius: 2.1, xp: 150, blood: 0x6a8a2a,
+    hp: 2100, speed: 4.6, dmg: 34, radius: 2.1, xp: 231, blood: 0x6a8a2a,
     build: bossWyrm,
     ability: 'charge',
   },
   {
     key: 'wraith',
     name: 'Wraith Lord',
-    hp: 2600, speed: 4.2, dmg: 32, radius: 2.2, xp: 180, blood: 0x5a3a7a,
+    hp: 2600, speed: 4.2, dmg: 32, radius: 2.2, xp: 277, blood: 0x5a3a7a,
     build: bossWraith,
     ability: 'volley',
   },
   {
     key: 'chimera',
     name: 'Hollow Chimera',
-    hp: 3400, speed: 5.0, dmg: 38, radius: 2.5, xp: 220, blood: 0x8a2b3a,
+    hp: 3400, speed: 5.0, dmg: 38, radius: 2.5, xp: 338, blood: 0x8a2b3a,
     build: bossChimera,
     ability: 'all',
   },
@@ -373,17 +373,17 @@ function bossTreant() {
   const g = new THREE.Group();
   const bark = stdMat(0x3b2c1e);
   const leaf = stdMat(0x1d3a1f);
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.5, 4.6, 8), bark);
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.5, 4.6, 24, 4), bark);
   trunk.position.y = 2.3; trunk.castShadow = true; g.add(trunk);
 
-  const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(2.1, 0), leaf);
+  const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(2.1, 3), leaf);
   crown.position.y = 5.4; crown.castShadow = true; g.add(crown);
 
-  const face = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), stdMat(0x2a1f14));
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.9, 28, 20), stdMat(0x2a1f14));
   face.position.set(0, 3.2, 1.0); face.scale.z = 0.6; g.add(face);
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffb03c });
   [-0.35, 0.35].forEach((x) => {
-    const e = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), eyeMat);
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.16, 18, 14), eyeMat);
     e.position.set(x, 3.4, 1.5); g.add(e);
   });
 
@@ -391,9 +391,9 @@ function bossTreant() {
   [-1, 1].forEach((s) => {
     const arm = new THREE.Group();
     arm.position.set(s * 1.4, 3.4, 0);
-    const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.45, 2.8, 6), bark);
+    const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.45, 2.8, 20, 3), bark);
     limb.position.y = -1.2; limb.castShadow = true; arm.add(limb);
-    const fist = new THREE.Mesh(new THREE.DodecahedronGeometry(0.7, 0), bark);
+    const fist = new THREE.Mesh(new THREE.DodecahedronGeometry(0.7, 2), bark);
     fist.position.y = -2.6; fist.castShadow = true; arm.add(fist);
     arm.rotation.z = s * 0.35;
     g.add(arm);
@@ -403,7 +403,7 @@ function bossTreant() {
   const roots = [];
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * TAU;
-    const r = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.5, 5), bark);
+    const r = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.5, 14), bark);
     r.position.set(Math.cos(a) * 1.2, 0.5, Math.sin(a) * 1.2);
     r.rotation.z = Math.cos(a) * 0.5;
     r.rotation.x = -Math.sin(a) * 0.5;
@@ -421,7 +421,7 @@ function bossWyrm() {
   const segs = [];
   for (let i = 0; i < 9; i++) {
     const s = 1.15 - i * 0.1;
-    const seg = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), i % 2 ? scaleMat : bellyMat);
+    const seg = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 3), i % 2 ? scaleMat : bellyMat);
     seg.castShadow = true;
     seg.position.set(0, 1.1, -i * 1.05);
     g.add(seg);
@@ -430,17 +430,17 @@ function bossWyrm() {
 
   const head = new THREE.Group();
   head.position.set(0, 1.5, 1.3);
-  const skull = new THREE.Mesh(new THREE.ConeGeometry(0.95, 2.2, 7), scaleMat);
+  const skull = new THREE.Mesh(new THREE.ConeGeometry(0.95, 2.2, 22), scaleMat);
   skull.rotation.x = Math.PI / 2; skull.castShadow = true; head.add(skull);
-  const jaw = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 5), stdMat(0x1c2a10));
+  const jaw = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 18), stdMat(0x1c2a10));
   jaw.rotation.x = Math.PI / 2; jaw.position.set(0, -0.35, 0.4); head.add(jaw);
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xd6ff3c });
   [-0.4, 0.4].forEach((x) => {
-    const e = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 5), eyeMat);
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.18, 18, 14), eyeMat);
     e.position.set(x, 0.32, 0.5); head.add(e);
   });
   for (let i = 0; i < 6; i++) {
-    const t = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.4, 4), stdMat(0xe8e2c8));
+    const t = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.4, 12), stdMat(0xe8e2c8));
     t.position.set((i % 2 ? 1 : -1) * 0.42, -0.1, 0.75 - Math.floor(i / 2) * 0.28);
     t.rotation.x = Math.PI / 2.2; head.add(t);
   }
@@ -451,37 +451,37 @@ function bossWyrm() {
 function bossWraith() {
   const g = new THREE.Group();
   const robe = stdMat(0x2b2338, { transparent: true, opacity: 0.93, side: THREE.DoubleSide });
-  const body = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4.4, 9, 3, true), robe);
+  const body = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4.4, 28, 8, true), robe);
   body.position.y = 2.2; body.castShadow = true; g.add(body);
 
-  const hood = new THREE.Mesh(new THREE.SphereGeometry(1.0, 10, 8, 0, TAU, 0, Math.PI * 0.6), robe);
+  const hood = new THREE.Mesh(new THREE.SphereGeometry(1.0, 28, 20, 0, TAU, 0, Math.PI * 0.6), robe);
   hood.position.y = 4.1; hood.castShadow = true; g.add(hood);
 
-  const voidFace = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 6), new THREE.MeshBasicMaterial({ color: 0x05030a }));
+  const voidFace = new THREE.Mesh(new THREE.SphereGeometry(0.7, 24, 18), new THREE.MeshBasicMaterial({ color: 0x05030a }));
   voidFace.position.set(0, 3.95, 0.25); g.add(voidFace);
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xbb6bff });
   const eyes = [];
   [-0.26, 0.26].forEach((x) => {
-    const e = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 5), eyeMat);
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), eyeMat);
     e.position.set(x, 4.0, 0.78); g.add(e); eyes.push(e);
   });
 
   // Floating sigil ring — spins faster while casting.
   const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(2.0, 0.08, 6, 24),
+    new THREE.TorusGeometry(2.0, 0.08, 14, 56),
     new THREE.MeshBasicMaterial({ color: 0x9b5cff, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending })
   );
   ring.rotation.x = Math.PI / 2; ring.position.y = 1.2; g.add(ring);
 
   const hands = [];
   [-1, 1].forEach((s) => {
-    const h = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 0), stdMat(0xcfc8d8));
+    const h = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 2), stdMat(0xcfc8d8));
     h.position.set(s * 1.5, 2.6, 0.6); g.add(h); hands.push(h);
   });
 
-  const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.2, 6), stdMat(0x2a2118));
+  const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.2, 16), stdMat(0x2a2118));
   staff.position.set(1.7, 2.4, 0.5); staff.rotation.z = -0.16; g.add(staff);
-  const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 1), new THREE.MeshBasicMaterial({ color: 0xbb6bff }));
+  const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 2), new THREE.MeshBasicMaterial({ color: 0xbb6bff }));
   orb.position.set(1.85, 4.5, 0.5); g.add(orb);
 
   return { group: g, anim: { ring, hands, eyes, orb, body } };
@@ -492,21 +492,21 @@ function bossChimera() {
   const hide = stdMat(0x4a1f24);
   const mane = stdMat(0x22131a);
 
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(1.15, 1.9, 5, 9), hide);
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(1.15, 1.9, 12, 28), hide);
   torso.rotation.x = Math.PI / 2; torso.position.y = 1.8; torso.castShadow = true; g.add(torso);
 
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.42, 6, 14), mane);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.42, 14, 36), mane);
   collar.position.set(0, 2.1, 1.1); collar.rotation.x = 0.3; g.add(collar);
 
   const heads = [];
   [-0.85, 0, 0.85].forEach((x, i) => {
     const h = new THREE.Group();
     h.position.set(x, 2.5 + (i === 1 ? 0.45 : 0), 1.9);
-    const skull = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.25, 6), hide);
+    const skull = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.25, 20), hide);
     skull.rotation.x = Math.PI / 2; skull.castShadow = true; h.add(skull);
     const eyeMat = new THREE.MeshBasicMaterial({ color: i === 1 ? 0xffd23c : 0xff3c3c });
     [-0.2, 0.2].forEach((ex) => {
-      const e = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 5), eyeMat);
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), eyeMat);
       e.position.set(ex, 0.16, 0.42); h.add(e);
     });
     g.add(h);
@@ -517,9 +517,9 @@ function bossChimera() {
   [[-0.8, 1.0], [0.8, 1.0], [-0.8, -1.0], [0.8, -1.0]].forEach(([x, z]) => {
     const l = new THREE.Group();
     l.position.set(x, 1.5, z);
-    const limb = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 1.1, 3, 6), hide);
+    const limb = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 1.1, 8, 18), hide);
     limb.position.y = -0.7; limb.castShadow = true; l.add(limb);
-    const claw = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.4, 5), stdMat(0xd8cfb8));
+    const claw = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.4, 14), stdMat(0xd8cfb8));
     claw.position.y = -1.45; claw.rotation.x = Math.PI; l.add(claw);
     g.add(l);
     legs.push(l);
@@ -528,11 +528,11 @@ function bossChimera() {
   const tail = new THREE.Group();
   tail.position.set(0, 2.0, -1.9);
   for (let i = 0; i < 5; i++) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(0.34 - i * 0.05, 6, 5), mane);
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.34 - i * 0.05, 18, 14), mane);
     s.position.set(0, i * 0.16, -i * 0.55);
     tail.add(s);
   }
-  const stinger = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.8, 5), new THREE.MeshBasicMaterial({ color: 0x9bff5c }));
+  const stinger = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.8, 14), new THREE.MeshBasicMaterial({ color: 0x9bff5c }));
   stinger.position.set(0, 0.8, -2.9); stinger.rotation.x = -0.5; tail.add(stinger);
   g.add(tail);
 
@@ -600,7 +600,7 @@ export class EnemyManager {
 
   _buildProjectiles() {
     const MAX = 110;
-    const geo = new THREE.IcosahedronGeometry(0.2, 0);
+    const geo = new THREE.IcosahedronGeometry(0.2, 2);
     const mat = new THREE.MeshBasicMaterial({ color: 0x9bff6a });
     this.projMesh = new THREE.InstancedMesh(geo, mat, MAX);
     this.projMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -676,7 +676,7 @@ export class EnemyManager {
     const minutes = elapsed / 60;
     const table = this._spawnTable(minutes);
     let count = Math.round(CFG.SPAWN.baseCount * d.countMul);
-    count = clamp(count, 1, 26);
+    count = clamp(count, 1, 17);
 
     for (let i = 0; i < count; i++) {
       const key = weighted(table);
@@ -875,7 +875,7 @@ export class EnemyManager {
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0) {
       const interval = Math.max(CFG.SPAWN.minInterval, CFG.SPAWN.baseInterval / d.countMul);
-      this.spawnTimer = interval;
+      this.spawnTimer = interval / CFG.DENSITY;
       this.spawnWave(player, elapsed);
     }
 

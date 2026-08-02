@@ -36,11 +36,11 @@ export class Pickups {
     const CAP = 460;
     // A "monster part" reads as a chunk of bone/claw: an octahedron works well
     // at this camera distance and costs almost nothing.
-    const geo = new THREE.OctahedronGeometry(0.19, 0);
+    const geo = new THREE.OctahedronGeometry(0.19, 1);
     this.partMeshes = PART_TIERS.map((tier) => {
       const mat = new THREE.MeshStandardMaterial({
         color: tier.color, emissive: tier.color, emissiveIntensity: 0.55,
-        roughness: 0.35, metalness: 0.1, flatShading: true,
+        roughness: 0.3, metalness: 0.15, flatShading: false,
       });
       const m = new THREE.InstancedMesh(geo, mat, CAP);
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -57,7 +57,7 @@ export class Pickups {
     const CAP = 40;
     const geo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
     const mat = new THREE.MeshStandardMaterial({
-      color: 0xff5a7a, emissive: 0xff2a4a, emissiveIntensity: 0.7, roughness: 0.4, flatShading: true,
+      color: 0xff5a7a, emissive: 0xff2a4a, emissiveIntensity: 0.7, roughness: 0.4, flatShading: false,
     });
     this.healthMesh = new THREE.InstancedMesh(geo, mat, CAP);
     this.healthMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -71,15 +71,15 @@ export class Pickups {
     this.chests = [];
     for (let i = 0; i < CFG.CHEST.maxAlive; i++) {
       const g = new THREE.Group();
-      const wood = new THREE.MeshStandardMaterial({ color: 0x53381f, roughness: 0.85, flatShading: true });
-      const iron = new THREE.MeshStandardMaterial({ color: 0x8a7a5a, metalness: 0.8, roughness: 0.4, flatShading: true });
+      const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a29, roughness: 0.8, flatShading: false });
+      const iron = new THREE.MeshStandardMaterial({ color: 0x9c8c68, metalness: 0.85, roughness: 0.35, flatShading: false });
 
       const base = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 0.72), wood);
       base.position.y = 0.3;
       base.castShadow = true;
       g.add(base);
 
-      const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 1.0, 10, 1, false, 0, Math.PI), wood);
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 1.0, 28, 1, false, 0, Math.PI), wood);
       lid.rotation.z = Math.PI / 2;
       lid.position.y = 0.6;
       lid.castShadow = true;
@@ -96,7 +96,7 @@ export class Pickups {
 
       // Faint glow so chests are findable in the dark.
       const glow = new THREE.Mesh(
-        new THREE.SphereGeometry(1.1, 10, 8),
+        new THREE.SphereGeometry(1.1, 22, 16),
         new THREE.MeshBasicMaterial({ color: 0xffd23c, transparent: true, opacity: 0.09, depthWrite: false, blending: THREE.AdditiveBlending })
       );
       glow.position.y = 0.5;
@@ -200,7 +200,7 @@ export class Pickups {
       for (let i = 0; i < n; i++) this.dropHealth(chest.x + rand(-0.7, 0.7), chest.z + rand(-0.7, 0.7), 22);
       this.game.toast('Chest: Health', '#ff6a8a');
     } else {
-      const value = Math.round(rand(22, 55) + this.player.level * 4);
+      const value = Math.round(rand(34, 84) + this.player.level * 6);
       this.dropParts(chest.x, chest.z, value);
       this.game.toast('Chest: Monster Parts', '#8fd94a');
     }

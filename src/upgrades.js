@@ -127,7 +127,7 @@ export function applyUpgrade(card, weaponSystem, player) {
     return { label: 'Field Dressing', gainedLevels: 0 };
   }
   if (card.key === '__parts') {
-    const gained = player.addXp(Math.round(30 + player.level * 6));
+    const gained = player.addXp(Math.round(46 + player.level * 9));
     return { label: 'Trophy Cache', gainedLevels: gained };
   }
   weaponSystem.addOrLevel(card.key);

@@ -19,21 +19,21 @@ function tileSeed(tx, tz) {
 
 /** Procedural ground texture — mottled forest floor, no image assets. */
 function makeGroundTexture() {
-  const S = 256;
+  const S = 512;
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d');
 
-  g.fillStyle = '#26301d';
+  g.fillStyle = '#3a4a2c';
   g.fillRect(0, 0, S, S);
 
   // Soft blotches of moss and dirt.
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 620; i++) {
     const x = Math.random() * S;
     const y = Math.random() * S;
     const r = 4 + Math.random() * 26;
     const shade = Math.random();
-    const col = shade < 0.45 ? [48, 66, 36] : shade < 0.8 ? [34, 44, 26] : [60, 54, 32];
+    const col = shade < 0.45 ? [70, 94, 52] : shade < 0.8 ? [52, 66, 40] : [86, 76, 46];
     const grd = g.createRadialGradient(x, y, 0, x, y, r);
     grd.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},0.75)`);
     grd.addColorStop(1, 'rgba(0,0,0,0)');
@@ -44,10 +44,10 @@ function makeGroundTexture() {
   }
 
   // Scattered twigs / leaf litter for high-frequency detail.
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 1400; i++) {
     const x = Math.random() * S;
     const y = Math.random() * S;
-    g.strokeStyle = `rgba(${40 + Math.random() * 30},${34 + Math.random() * 26},${16 + Math.random() * 14},0.5)`;
+    g.strokeStyle = `rgba(${72 + Math.random() * 40},${62 + Math.random() * 34},${34 + Math.random() * 20},0.55)`;
     g.lineWidth = 0.7 + Math.random();
     g.beginPath();
     g.moveTo(x, y);
@@ -59,7 +59,7 @@ function makeGroundTexture() {
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(24, 24);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
+  tex.anisotropy = 8;
   return tex;
 }
 
@@ -72,6 +72,7 @@ export class World {
     this.half = Math.floor(this.grid / 2);
     this.perTile = CFG.WORLD.treesPerTile;
     this.rocksPerTile = CFG.WORLD.rocksPerTile;
+    this.fernsPerTile = CFG.WORLD.fernsPerTile;
 
     // Tracks which world tile currently occupies each grid slot, so we only
     // rebuild a slot when the player actually crosses a boundary.
@@ -92,14 +93,14 @@ export class World {
     scene.background = new THREE.Color(CFG.WORLD.fogColor);
 
     // Cold ambient bounce — keeps shadowed sides readable without flattening.
-    const hemi = new THREE.HemisphereLight(0x4a6b96, 0x12180d, 1.05);
+    const hemi = new THREE.HemisphereLight(0x5b7fae, 0x1b2414, 1.5);
     scene.add(hemi);
 
     // Moonlight. Deliberately dim and blue; the lantern does the real work.
-    const moon = new THREE.DirectionalLight(0xaed0ff, 1.55);
+    const moon = new THREE.DirectionalLight(0xc2ddff, 2.15);
     moon.position.set(-24, 40, -18);
     moon.castShadow = true;
-    moon.shadow.mapSize.set(1024, 1024);
+    moon.shadow.mapSize.set(2048, 2048);
     moon.shadow.camera.near = 1;
     moon.shadow.camera.far = 110;
     const s = 34;
@@ -114,17 +115,17 @@ export class World {
     this.moon = moon;
 
     // Warm lantern carried by the hunter — repositioned each frame.
-    const lantern = new THREE.PointLight(0xffb057, 34, 30, 1.7);
+    const lantern = new THREE.PointLight(0xffbc6b, 40, 34, 1.6);
     lantern.position.set(0, 2.2, 0);
     scene.add(lantern);
     this.lantern = lantern;
 
-    scene.add(new THREE.AmbientLight(0x2a3450, 0.95));
+    scene.add(new THREE.AmbientLight(0x39456a, 1.35));
   }
 
   _buildGround() {
     const size = this.tileSize * (this.grid + 1);
-    const geo = new THREE.PlaneGeometry(size, size, 1, 1);
+    const geo = new THREE.PlaneGeometry(size, size, 32, 32);
     geo.rotateX(-Math.PI / 2);
     this.groundTex = makeGroundTexture();
     const mat = new THREE.MeshStandardMaterial({
@@ -141,12 +142,12 @@ export class World {
     // A dark vignette ring that sits just above the ground and fades the world
     // out toward the fog — sells the "deep forest" feel far cheaper than fog
     // alone at this camera angle.
-    const ringGeo = new THREE.RingGeometry(36, 62, 48, 1);
+    const ringGeo = new THREE.RingGeometry(36, 62, 96, 1);
     ringGeo.rotateX(-Math.PI / 2);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0x02040a,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.16,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
@@ -160,9 +161,9 @@ export class World {
     const total = this.grid * this.grid * this.perTile;
 
     // --- pine trunks -------------------------------------------------------
-    const trunkGeo = new THREE.CylinderGeometry(0.17, 0.3, 3.2, 6, 1);
+    const trunkGeo = new THREE.CylinderGeometry(0.17, 0.32, 3.2, 12, 2);
     trunkGeo.translate(0, 1.6, 0);
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d3123, roughness: 0.95 });
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x554636, roughness: 0.92 });
     this.trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, total);
     this.trunks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.trunks.castShadow = true;
@@ -170,12 +171,12 @@ export class World {
     this.scene.add(this.trunks);
 
     // --- foliage: two stacked cones per tree -------------------------------
-    const lowGeo = new THREE.ConeGeometry(1.55, 3.4, 7, 1);
+    const lowGeo = new THREE.ConeGeometry(1.55, 3.4, 16, 3);
     lowGeo.translate(0, 1.7, 0);
-    const topGeo = new THREE.ConeGeometry(1.05, 3.0, 7, 1);
+    const topGeo = new THREE.ConeGeometry(1.05, 3.0, 16, 3);
     topGeo.translate(0, 1.5, 0);
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x21452a, roughness: 0.9, flatShading: true });
-    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x2a5433, roughness: 0.9, flatShading: true });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f6038, roughness: 0.9, flatShading: false });
+    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x3c7546, roughness: 0.9, flatShading: false });
 
     this.foliageLow = new THREE.InstancedMesh(lowGeo, leafMat, total);
     this.foliageTop = new THREE.InstancedMesh(topGeo, leafMat2, total);
@@ -188,14 +189,32 @@ export class World {
 
     // --- rocks / stumps ----------------------------------------------------
     const rockTotal = this.grid * this.grid * this.rocksPerTile;
-    const rockGeo = new THREE.DodecahedronGeometry(0.6, 0);
-    const rockMat = new THREE.MeshStandardMaterial({ color: 0x3c424a, roughness: 1, flatShading: true });
+    const rockGeo = new THREE.DodecahedronGeometry(0.6, 1);
+    // Rocks keep flat shading deliberately: faceted reads as stone, not as
+    // missing geometry. Everything organic is smooth.
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x555d68, roughness: 1, flatShading: true });
     this.rocks = new THREE.InstancedMesh(rockGeo, rockMat, rockTotal);
     this.rocks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.rocks.castShadow = true;
     this.rocks.receiveShadow = true;
     this.rocks.frustumCulled = false;
     this.scene.add(this.rocks);
+
+    // --- ferns / undergrowth ------------------------------------------------
+    // A cheap fourth prop layer. Shares the tile system, so it recycles with
+    // everything else and costs one extra draw call.
+    const fernTotal = this.grid * this.grid * this.fernsPerTile;
+    const fernGeo = new THREE.ConeGeometry(0.34, 0.85, 6, 2, true);
+    fernGeo.translate(0, 0.42, 0);
+    const fernMat = new THREE.MeshStandardMaterial({
+      color: 0x376b3c, roughness: 0.85, side: THREE.DoubleSide,
+    });
+    this.ferns = new THREE.InstancedMesh(fernGeo, fernMat, fernTotal);
+    this.ferns.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.ferns.castShadow = false;
+    this.ferns.receiveShadow = true;
+    this.ferns.frustumCulled = false;
+    this.scene.add(this.ferns);
 
     // --- ground fog cards --------------------------------------------------
     // Cheap billboarded mist that drifts near the floor.
@@ -281,6 +300,18 @@ export class World {
       this.foliageTop.setMatrixAt(base + i, d.matrix);
     }
 
+    const fbase = slot * this.fernsPerTile;
+    for (let i = 0; i < this.fernsPerTile; i++) {
+      const x = ox + (rng() - 0.5) * size;
+      const z = oz + (rng() - 0.5) * size;
+      const fs = 0.6 + rng() * 0.9;
+      d.position.set(x, 0, z);
+      d.rotation.set((rng() - 0.5) * 0.25, rng() * TAU, (rng() - 0.5) * 0.25);
+      d.scale.set(fs, fs * (0.7 + rng() * 0.7), fs);
+      d.updateMatrix();
+      this.ferns.setMatrixAt(fbase + i, d.matrix);
+    }
+
     const rbase = slot * this.rocksPerTile;
     for (let i = 0; i < this.rocksPerTile; i++) {
       const x = ox + (rng() - 0.5) * size;
@@ -322,6 +353,7 @@ export class World {
         this.foliageLow.instanceMatrix.needsUpdate = true;
         this.foliageTop.instanceMatrix.needsUpdate = true;
         this.rocks.instanceMatrix.needsUpdate = true;
+        this.ferns.instanceMatrix.needsUpdate = true;
         this.trunks.computeBoundingSphere();
       }
       // Snap the shared ground plane so it always sits under the player.

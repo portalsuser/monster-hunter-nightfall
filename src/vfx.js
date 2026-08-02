@@ -20,7 +20,7 @@ export class VFX {
   // -------------------------------------------------------------------------
   _buildParticles() {
     const MAX = CFG.MAX_PARTICLES;
-    const geo = new THREE.TetrahedronGeometry(0.13, 0);
+    const geo = new THREE.IcosahedronGeometry(0.11, 1);
     // NOTE: no `vertexColors: true` here. Per-instance tint comes from
     // instanceColor (USE_INSTANCING_COLOR); switching on vertexColors as well
     // would make three declare a `color` attribute the geometry does not have,
@@ -113,7 +113,7 @@ export class VFX {
   _buildRings() {
     const MAX = 24;
     this.rings = [];
-    const geo = new THREE.RingGeometry(0.72, 1.0, 32);
+    const geo = new THREE.RingGeometry(0.72, 1.0, 80);
     geo.rotateX(-Math.PI / 2);
     for (let i = 0; i < MAX; i++) {
       const mat = new THREE.MeshBasicMaterial({

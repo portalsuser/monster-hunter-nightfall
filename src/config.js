@@ -32,10 +32,11 @@ export const CFG = {
   WORLD: {
     tileSize: 40,             // ground tiles recycled around the player
     tileGrid: 5,              // 5x5 tiles follow the player -> 200u of ground
-    treesPerTile: 26,
-    rocksPerTile: 7,
+    treesPerTile: 34,
+    rocksPerTile: 10,
+    fernsPerTile: 30,
     fogColor: 0x05070c,
-    fogDensity: 0.0125,
+    fogDensity: 0.0080,
     groundColor: 0x11180f,
   },
 
@@ -47,15 +48,21 @@ export const CFG = {
     return Math.round(4 + level * 3.4 + Math.pow(level, 1.82) * 1.25);
   },
 
+  // Global horde density. Spawn *rate* is what gets scaled (not the per-wave
+  // count, which is a small integer and would round badly). Monster part values
+  // are raised by roughly the inverse in enemies.js, so thinning the horde does
+  // not slow progression down.
+  DENSITY: 0.65,
+
   // ---- spawning ------------------------------------------------------------
   SPAWN: {
     innerRadius: 21,          // never spawn closer than this to the player
     outerRadius: 28,
     despawnRadius: 62,        // enemies past this get recycled to the far side
-    baseInterval: 1.5,        // seconds between spawn waves at t=0
-    minInterval: 0.16,
+    baseInterval: 1.5,        // seconds between spawn waves at t=0 (before DENSITY)
+    minInterval: 0.16,       // floor, also divided by DENSITY
     baseCount: 2,
-    maxAlive: 340,
+    maxAlive: 220,
   },
 
   // ---- chests --------------------------------------------------------------

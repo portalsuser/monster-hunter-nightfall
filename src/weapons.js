@@ -23,11 +23,11 @@ function projectileStyles() {
   return {
     knife: {
       geo: () => {
-        const g = new THREE.ConeGeometry(0.09, 0.5, 4);
+        const g = new THREE.ConeGeometry(0.09, 0.5, 12);
         g.rotateX(Math.PI / 2);
         return g;
       },
-      mat: () => new THREE.MeshStandardMaterial({ color: 0xcfd6e0, metalness: 0.9, roughness: 0.25, flatShading: true }),
+      mat: () => new THREE.MeshStandardMaterial({ color: 0xcfd6e0, metalness: 0.9, roughness: 0.25, flatShading: false }),
       cap: 90,
     },
     cross: {
@@ -42,18 +42,18 @@ function projectileStyles() {
       cap: 40,
     },
     flask: {
-      geo: () => new THREE.SphereGeometry(0.19, 7, 6),
+      geo: () => new THREE.SphereGeometry(0.19, 20, 16),
       mat: () => new THREE.MeshStandardMaterial({ color: 0x8fd8ff, emissive: 0x1d5f80, transparent: true, opacity: 0.9, roughness: 0.15 }),
       cap: 30,
     },
     frost: {
-      geo: () => new THREE.OctahedronGeometry(0.2, 0),
-      mat: () => new THREE.MeshStandardMaterial({ color: 0xa8e8ff, emissive: 0x2a6a8a, flatShading: true, roughness: 0.2 }),
+      geo: () => new THREE.OctahedronGeometry(0.2, 2),
+      mat: () => new THREE.MeshStandardMaterial({ color: 0xa8e8ff, emissive: 0x2a6a8a, flatShading: false, roughness: 0.2 }),
       cap: 30,
     },
     glaive: {
       geo: () => {
-        const g = new THREE.TorusGeometry(0.46, 0.07, 4, 12, Math.PI * 1.5);
+        const g = new THREE.TorusGeometry(0.46, 0.07, 12, 32, Math.PI * 1.5);
         g.rotateX(Math.PI / 2);
         return g;
       },
@@ -62,11 +62,11 @@ function projectileStyles() {
     },
     fang: {
       geo: () => {
-        const g = new THREE.ConeGeometry(0.11, 0.62, 4);
+        const g = new THREE.ConeGeometry(0.11, 0.62, 12);
         g.rotateX(Math.PI / 2);
         return g;
       },
-      mat: () => new THREE.MeshStandardMaterial({ color: 0xe8d8b0, metalness: 0.5, roughness: 0.5, flatShading: true }),
+      mat: () => new THREE.MeshStandardMaterial({ color: 0xe8d8b0, metalness: 0.5, roughness: 0.5, flatShading: false }),
       cap: 24,
     },
   };
@@ -378,7 +378,7 @@ export class WeaponSystem {
   _buildGroundEffects() {
     const MAX = 22;
     this.grounds = [];
-    const geo = new THREE.CircleGeometry(1, 26);
+    const geo = new THREE.CircleGeometry(1, 64);
     geo.rotateX(-Math.PI / 2);
     for (let i = 0; i < MAX; i++) {
       const mat = new THREE.MeshBasicMaterial({
@@ -398,7 +398,7 @@ export class WeaponSystem {
     const MAX = 8;
     this.slashes = [];
     for (let i = 0; i < MAX; i++) {
-      const geo = new THREE.RingGeometry(0.55, 1.0, 24, 1, 0, 2.0);
+      const geo = new THREE.RingGeometry(0.55, 1.0, 56, 2, 0, 2.0);
       geo.rotateX(-Math.PI / 2);
       const mat = new THREE.MeshBasicMaterial({
         color: 0xe8eef7, transparent: true, opacity: 0, depthWrite: false,
@@ -414,7 +414,7 @@ export class WeaponSystem {
 
   _buildAuras() {
     // Pyre ring.
-    const pyreGeo = new THREE.RingGeometry(0.55, 1.0, 40);
+    const pyreGeo = new THREE.RingGeometry(0.55, 1.0, 96);
     pyreGeo.rotateX(-Math.PI / 2);
     this.pyreMesh = new THREE.Mesh(pyreGeo, new THREE.MeshBasicMaterial({
       color: 0xff7b2a, transparent: true, opacity: 0.34, depthWrite: false,
@@ -427,7 +427,7 @@ export class WeaponSystem {
 
     // Censer smoke sphere.
     this.censerMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 16, 12),
+      new THREE.SphereGeometry(1, 32, 24),
       new THREE.MeshBasicMaterial({
         color: 0xc8b0ff, transparent: true, opacity: 0, depthWrite: false,
         blending: THREE.AdditiveBlending,
@@ -442,11 +442,11 @@ export class WeaponSystem {
   _buildTraps() {
     const MAX = 8;
     this.traps = [];
-    const jawGeo = new THREE.TorusGeometry(0.4, 0.07, 4, 10, Math.PI);
-    const plateGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 8);
+    const jawGeo = new THREE.TorusGeometry(0.4, 0.07, 10, 26, Math.PI);
+    const plateGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 24);
     for (let i = 0; i < MAX; i++) {
       const g = new THREE.Group();
-      const mat = new THREE.MeshStandardMaterial({ color: 0x8a8a94, metalness: 0.8, roughness: 0.4, flatShading: true });
+      const mat = new THREE.MeshStandardMaterial({ color: 0x8a8a94, metalness: 0.8, roughness: 0.35, flatShading: false });
       const plate = new THREE.Mesh(plateGeo, mat);
       plate.position.y = 0.03;
       g.add(plate);
@@ -464,7 +464,7 @@ export class WeaponSystem {
   _buildBolts() {
     const MAX = 10;
     this.bolts = [];
-    const geo = new THREE.CylinderGeometry(0.08, 0.22, 14, 5, 1, true);
+    const geo = new THREE.CylinderGeometry(0.08, 0.22, 14, 12, 1, true);
     geo.translate(0, 7, 0);
     for (let i = 0; i < MAX; i++) {
       const mat = new THREE.MeshBasicMaterial({
@@ -485,13 +485,13 @@ export class WeaponSystem {
     for (let i = 0; i < MAX; i++) {
       const g = new THREE.Group();
       const mat = new THREE.MeshBasicMaterial({ color: 0x8affd8, transparent: true, opacity: 0.55 });
-      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.5, 3, 6), mat);
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.5, 8, 18), mat);
       body.rotation.x = Math.PI / 2;
       body.position.y = 0.55;
-      const head = new THREE.Mesh(new THREE.ConeGeometry(0.19, 0.42, 5), mat);
+      const head = new THREE.Mesh(new THREE.ConeGeometry(0.19, 0.42, 16), mat);
       head.rotation.x = Math.PI / 2;
       head.position.set(0, 0.62, 0.48);
-      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.4, 4), mat);
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.4, 12), mat);
       tail.rotation.x = -Math.PI / 2.5;
       tail.position.set(0, 0.66, -0.5);
       g.add(body, head, tail);

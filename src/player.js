@@ -24,10 +24,12 @@ function buildHunter() {
   const g = new THREE.Group();
   const parts = {};
 
-  const mat = (color, rough = 0.8, flat = true) =>
+  // Smooth shading throughout now that the meshes carry enough segments for it
+  // — flat shading was hiding the low segment counts, not stylising them.
+  const mat = (color, rough = 0.8, flat = false) =>
     new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0, flatShading: flat });
   const metalMat = (color) =>
-    new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.85, flatShading: true });
+    new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.9, flatShading: false });
 
   const add = (parent, mesh, x = 0, y = 0, z = 0) => {
     mesh.position.set(x, y, z);
@@ -41,7 +43,7 @@ function buildHunter() {
   g.add(body);
   parts.body = body;
 
-  const chest = add(body, new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.42, 4, 8), mat(PAL.leather, 0.85)), 0, 1.18, 0);
+  const chest = add(body, new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.42, 10, 24), mat(PAL.leather, 0.85)), 0, 1.18, 0);
   chest.scale.set(1.0, 1.0, 0.78);
 
   // Chest harness straps.
@@ -52,7 +54,7 @@ function buildHunter() {
   strapR.rotation.z = -0.26;
 
   // Belt + buckle.
-  add(body, new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.055, 6, 14), mat(PAL.leatherDark)), 0, 0.86, 0).rotation.x = Math.PI / 2;
+  add(body, new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.055, 12, 32), mat(PAL.leatherDark)), 0, 0.86, 0).rotation.x = Math.PI / 2;
   add(body, new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.06), metalMat(PAL.metal)), 0, 0.86, 0.31);
 
   // Vials on the belt — tiny green/red glass.
@@ -62,7 +64,7 @@ function buildHunter() {
     });
     // Tagged so the hurt-flash pass below does not blank out their glow.
     vialMat.userData.keepEmissive = true;
-    const v = add(body, new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.16, 6), vialMat), x, 0.79, 0.26);
+    const v = add(body, new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.16, 16), vialMat), x, 0.79, 0.26);
     v.rotation.x = 0.2;
   });
 
@@ -72,10 +74,10 @@ function buildHunter() {
   body.add(head);
   parts.head = head;
 
-  add(head, new THREE.Mesh(new THREE.SphereGeometry(0.23, 10, 8), mat(PAL.skin, 0.9, false)), 0, 0, 0);
+  add(head, new THREE.Mesh(new THREE.SphereGeometry(0.23, 28, 20), mat(PAL.skin, 0.9, false)), 0, 0, 0);
 
   // Helm dome.
-  const helm = add(head, new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8, 0, TAU, 0, Math.PI * 0.62), metalMat(PAL.metalDark)), 0, 0.02, 0);
+  const helm = add(head, new THREE.Mesh(new THREE.SphereGeometry(0.26, 28, 20, 0, TAU, 0, Math.PI * 0.62), metalMat(PAL.metalDark)), 0, 0.02, 0);
   helm.scale.set(1, 1.05, 1.05);
 
   // Brow guard.
@@ -83,45 +85,45 @@ function buildHunter() {
   brow.rotation.x = -0.12;
 
   // Horns — the signature silhouette.
-  const hornGeo = new THREE.ConeGeometry(0.075, 0.52, 6, 3);
+  const hornGeo = new THREE.ConeGeometry(0.075, 0.52, 16, 6);
   [-1, 1].forEach((s) => {
     const horn = add(head, new THREE.Mesh(hornGeo, mat(PAL.horn, 0.6)), s * 0.21, 0.16, -0.02);
     horn.rotation.z = s * 0.72;
     horn.rotation.x = -0.4;
-    const tip = add(head, new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.34, 6, 2), mat(PAL.horn, 0.6)), s * 0.42, 0.36, -0.14);
+    const tip = add(head, new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.34, 14, 4), mat(PAL.horn, 0.6)), s * 0.42, 0.36, -0.14);
     tip.rotation.z = s * 0.25;
     tip.rotation.x = -0.9;
   });
 
   // Glowing eyes under the brow.
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffd27f });
-  [-1, 1].forEach((s) => add(head, new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), eyeMat), s * 0.09, -0.02, 0.21));
+  [-1, 1].forEach((s) => add(head, new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 12), eyeMat), s * 0.09, -0.02, 0.21));
 
   // Scarf / mask over the lower face.
-  const scarf = add(head, new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.2, 8), mat(0x5a2420)), 0, -0.16, 0.02);
+  const scarf = add(head, new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.2, 24), mat(0x5a2420)), 0, -0.16, 0.02);
   scarf.scale.z = 0.85;
 
   // ---- hood + cloak ------------------------------------------------------
-  const hood = add(body, new THREE.Mesh(new THREE.SphereGeometry(0.36, 10, 8, 0, TAU, 0, Math.PI * 0.62), mat(PAL.cloak, 0.95)), 0, 1.74, -0.06);
+  const hood = add(body, new THREE.Mesh(new THREE.SphereGeometry(0.36, 28, 20, 0, TAU, 0, Math.PI * 0.62), mat(PAL.cloak, 0.95)), 0, 1.74, -0.06);
   hood.scale.set(1.05, 1.0, 1.15);
 
   const cloak = new THREE.Group();
   cloak.position.set(0, 1.55, -0.16);
   body.add(cloak);
   parts.cloak = cloak;
-  const cloakGeo = new THREE.ConeGeometry(0.62, 1.5, 8, 3, true);
+  const cloakGeo = new THREE.ConeGeometry(0.62, 1.5, 26, 10, true);
   const cloakMesh = new THREE.Mesh(cloakGeo, new THREE.MeshStandardMaterial({
-    color: PAL.cloak, roughness: 0.95, flatShading: true, side: THREE.DoubleSide,
+    color: PAL.cloak, roughness: 0.95, flatShading: false, side: THREE.DoubleSide,
   }));
   cloakMesh.position.y = -0.72;
   cloakMesh.castShadow = true;
   cloak.add(cloakMesh);
 
   // Torn hem — a ring of small triangles at the bottom of the cloak.
-  const hemMat = new THREE.MeshStandardMaterial({ color: PAL.cloakDark, side: THREE.DoubleSide, flatShading: true, roughness: 1 });
+  const hemMat = new THREE.MeshStandardMaterial({ color: PAL.cloakDark, side: THREE.DoubleSide, flatShading: false, roughness: 1 });
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * TAU;
-    const t = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 3), hemMat);
+    const t = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 8), hemMat);
     t.position.set(Math.cos(a) * 0.6, -1.55, Math.sin(a) * 0.6);
     t.rotation.x = Math.PI;
     cloak.add(t);
@@ -129,16 +131,16 @@ function buildHunter() {
 
   // ---- pauldrons ---------------------------------------------------------
   [-1, 1].forEach((s) => {
-    const p = add(body, new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6, 0, TAU, 0, Math.PI * 0.6), metalMat(PAL.metalDark)), s * 0.4, 1.46, 0);
+    const p = add(body, new THREE.Mesh(new THREE.SphereGeometry(0.2, 24, 16, 0, TAU, 0, Math.PI * 0.6), metalMat(PAL.metalDark)), s * 0.4, 1.46, 0);
     p.rotation.z = s * 0.55;
     p.scale.set(1.15, 0.85, 1.0);
-    const stud = add(body, new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.14, 5), metalMat(PAL.metal)), s * 0.55, 1.5, 0);
+    const stud = add(body, new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.14, 12), metalMat(PAL.metal)), s * 0.55, 1.5, 0);
     stud.rotation.z = s * -1.3;
   });
 
   // ---- arms with bandaged fists -----------------------------------------
-  const armGeo = new THREE.CapsuleGeometry(0.1, 0.4, 3, 6);
-  const fistGeo = new THREE.IcosahedronGeometry(0.16, 0);
+  const armGeo = new THREE.CapsuleGeometry(0.1, 0.4, 8, 18);
+  const fistGeo = new THREE.IcosahedronGeometry(0.16, 2);
   parts.arms = [];
   [-1, 1].forEach((s) => {
     const arm = new THREE.Group();
@@ -146,11 +148,11 @@ function buildHunter() {
     body.add(arm);
     const upper = add(arm, new THREE.Mesh(armGeo, mat(PAL.leather, 0.9)), 0, -0.24, 0);
     const wrapMat = mat(PAL.wrap, 1);
-    const fore = add(arm, new THREE.Mesh(new THREE.CapsuleGeometry(0.095, 0.26, 3, 6), wrapMat), 0, -0.6, 0);
+    const fore = add(arm, new THREE.Mesh(new THREE.CapsuleGeometry(0.095, 0.26, 8, 18), wrapMat), 0, -0.6, 0);
     const fist = add(arm, new THREE.Mesh(fistGeo, wrapMat), 0, -0.84, 0.02);
     // Knuckle spikes — these are the level-1 "weapon".
     for (let i = 0; i < 3; i++) {
-      const sp = add(arm, new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.1, 4), metalMat(PAL.metal)), (i - 1) * 0.075, -0.88, 0.14);
+      const sp = add(arm, new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.1, 10), metalMat(PAL.metal)), (i - 1) * 0.075, -0.88, 0.14);
       sp.rotation.x = Math.PI / 2;
     }
     arm.userData.side = s;
@@ -163,7 +165,7 @@ function buildHunter() {
     const leg = new THREE.Group();
     leg.position.set(s * 0.16, 0.82, 0);
     body.add(leg);
-    add(leg, new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.4, 3, 6), mat(PAL.leatherDark, 0.9)), 0, -0.26, 0);
+    add(leg, new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.4, 8, 18), mat(PAL.leatherDark, 0.9)), 0, -0.26, 0);
     const boot = add(leg, new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.34), mat(0x24190f)), 0, -0.56, 0.05);
     leg.userData.side = s;
     parts.legs.push(leg);
@@ -174,9 +176,9 @@ function buildHunter() {
   lantern.position.set(0.42, 0.9, -0.06);
   body.add(lantern);
   parts.lantern = lantern;
-  const cage = add(lantern, new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.2, 6, 1, true), metalMat(PAL.metalDark)), 0, 0, 0);
-  add(lantern, new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.09, 6), metalMat(PAL.metalDark)), 0, 0.13, 0);
-  const flame = add(lantern, new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6),
+  const cage = add(lantern, new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.2, 16, 1, true), metalMat(PAL.metalDark)), 0, 0, 0);
+  add(lantern, new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.09, 16), metalMat(PAL.metalDark)), 0, 0.13, 0);
+  const flame = add(lantern, new THREE.Mesh(new THREE.SphereGeometry(0.07, 18, 14),
     new THREE.MeshBasicMaterial({ color: 0xffc46b })), 0, 0, 0);
   parts.flame = flame;
 

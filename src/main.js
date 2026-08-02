@@ -58,7 +58,7 @@ class Game {
     const canvas = document.getElementById('game');
     this.renderer = new THREE.WebGLRenderer({
       canvas,
-      antialias: window.devicePixelRatio < 2,
+      antialias: true,
       powerPreference: 'high-performance',
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -67,7 +67,7 @@ class Game {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.4;
+    this.renderer.toneMappingExposure = 1.5;
   }
 
   _initScene() {
@@ -238,7 +238,7 @@ class Game {
     this.player.kills++;
     this.pickups.dropParts(e.x, e.z, e.xp);
     // Occasional health drop from trash.
-    if (Math.random() < 0.012) this.pickups.dropHealth(e.x, e.z, 12);
+    if (Math.random() < 0.018) this.pickups.dropHealth(e.x, e.z, 12);
   }
 
   onBossSpawn(boss) {
